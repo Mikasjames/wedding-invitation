@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+
+@import '@fontsource-variable/cormorant-garamond/wght.css';
+@import '@fontsource-variable/cormorant-garamond/wght-italic.css';
+@import '@fontsource-variable/montserrat/wght.css';
+
+@theme {
+	/* ── Type ─────────────────────────────────────────────────── */
+	--font-display: 'Cormorant Garamond Variable', ui-serif, Georgia, serif;
+	--font-body: 'Montserrat Variable', ui-sans-serif, system-ui, sans-serif;
+
+	/* ── Palette ─────────────────────────────────────────────── */
+	--color-ivory: #fdfbf7;
+	--color-champagne: #f3e7d3;
+	--color-champagne-deep: #e3d0ae;
+	--color-blush: #ead3cb;
+	--color-gold: #d4af37;
+	--color-gold-deep: #a8852a;
+	--color-bronze: #8a6a2f;
+	--color-ink: #1c1917;
+	--color-forest-900: #16201b;
+	--color-forest-800: #1f2e27;
+	--color-forest-700: #2c3f36;
+	--color-sage: #a7b49b;
+	--color-terracotta: #c08a6b;
+	--color-oxblood: #7a1f2b;
+
+	/* ── Motion ──────────────────────────────────────────────── */
+	/* CSS approximations of Svelte's quintOut / cubicInOut */
+	--ease-luxury: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-silk: cubic-bezier(0.65, 0, 0.35, 1);
+
+	--shadow-luxe: 0 18px 40px -20px rgb(22 32 27 / 0.45);
+
+	/* ── Ambient animation ───────────────────────────────────── */
+	--animate-breathe: breathe 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+	--animate-seal-pulse: seal-pulse 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+	@keyframes breathe {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-4px);
+		}
+	}
+
+	@keyframes seal-pulse {
+		0%,
+		100% {
+			transform: scale(1);
+			opacity: 0.55;
+		}
+		50% {
+			transform: scale(1.28);
+			opacity: 0;
+		}
+	}
+}
+
+@layer base {
+	html {
+		-webkit-text-size-adjust: 100%;
+	}
+
+	body {
+		background-color: var(--color-ivory);
+		color: var(--color-ink);
+		font-family: var(--font-body);
+		font-synthesis-weight: none;
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+		overscroll-behavior-y: none;
+	}
+}
