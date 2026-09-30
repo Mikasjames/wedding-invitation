@@ -17,6 +17,14 @@
 					transform: none !important;
 					pointer-events: auto !important;
 				}
+				/* The plants are clipped to nothing until `reveal.opened` flips
+				     a class on their container. Nothing can flip it without JS,
+				     so without this they would stay invisible for good — the
+				     invitation would render with two empty corners and no way
+				     to recover. Unclip them, same as the curtain above. */
+				img[data-sprig] {
+					clip-path: none !important;
+				}
 			</style>
 		</noscript>
 		%sveltekit.head%
