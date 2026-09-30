@@ -28,7 +28,7 @@ export const wedding = {
 
 	timeLabel: 'Four in the afternoon, until the small hours',
 
-	city: 'Como, Italy',
+	city: 'Tanza, Cavite',
 
 	ceremony: {
 		name: 'The Ceremony',
