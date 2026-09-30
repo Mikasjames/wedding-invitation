@@ -18,9 +18,17 @@ class Ambience {
 		if (this.#el) return this.#el;
 
 		const el = new Audio('/audio/ambience.m4a');
-		el.loop = true;
+		// No loop: the track plays once and stays silent. Replaying is the guest's
+		// choice via the toggle, not something that happens on its own.
 		el.preload = 'none';
 		el.volume = 0;
+		el.addEventListener('ended', () => {
+			// Park the element at silence so a later play() always fades in from
+			// 0, and reflect the finished state in the toggle.
+			cancelAnimationFrame(this.#raf);
+			el.volume = 0;
+			this.playing = false;
+		});
 		// Older WebKit is markedly more reliable when the element is in the document.
 		document.body.append(el);
 
