@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { base } from '$app/paths';
 
 const TARGET_VOLUME = 0.34;
 const FADE_IN_MS = 1800;
@@ -17,7 +18,12 @@ class Ambience {
 	#ensure(): HTMLAudioElement {
 		if (this.#el) return this.#el;
 
-		const el = new Audio('/audio/ambience.m4a');
+		// `base` is `''` on a custom domain, so this resolves to the same
+		// root-relative URL it always was. Prefixed anyway: a hardcoded root path is
+		// the one thing that silently 404s if this ever moves under a subpath, and
+		// it would take an audit rather than a grep to find. `base` is a build-time
+		// constant, so this costs nothing.
+		const el = new Audio(`${base}/audio/ambience.m4a`);
 		// No loop: the track plays once and stays silent. Replaying is the guest's
 		// choice via the toggle, not something that happens on its own.
 		el.preload = 'none';
