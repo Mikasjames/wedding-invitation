@@ -14,13 +14,26 @@
 	--color-champagne: #f3e7d3;
 	--color-champagne-deep: #e3d0ae;
 	--color-blush: #ead3cb;
-	--color-gold: #d4af37;
-	--color-gold-deep: #a8852a;
-	--color-bronze: #8a6a2f;
+	--color-rose: #d4a5a5;
+	--color-rose-deep: #bd8e8f;
+	/* Deepened from #d4af37. That gold measured 1.10:1 against the pink curtain —
+	   effectively invisible. This keeps the warm metal accent and stays legible. */
+	--color-gold: #7a5a20;
+	--color-gold-deep: #6b4f1c;
+	--color-bronze: #5c4318;
 	--color-ink: #1c1917;
-	--color-forest-900: #16201b;
-	--color-forest-800: #1f2e27;
-	--color-forest-700: #2c3f36;
+	--color-forest-900: #4a1f2c;
+	--color-forest-800: #d4a5a5;
+	--color-forest-700: #bd8e8f;
+	/* Deep plum. The curtain's own microcopy and the wax seal.
+	   Gold cannot be used on a light drape — it measured 1.29:1 on the rose and
+	   1.04:1 on the original pink, so gold is confined to the interior, where it
+	   sits on ivory and passes comfortably. */
+	--color-plum: #4a1f2c;
+	--color-plum-soft: #7a3550;
+	/* Rose-gold: the seal bezel, bridging the plum seal and the rose curtain.
+	   4.89:1 on the seal, so the rim is legible rather than decorative. */
+	--color-rose-gold: #c98b7a;
 	--color-sage: #a7b49b;
 	--color-terracotta: #c08a6b;
 	--color-oxblood: #7a1f2b;
@@ -30,7 +43,7 @@
 	--ease-luxury: cubic-bezier(0.22, 1, 0.36, 1);
 	--ease-silk: cubic-bezier(0.65, 0, 0.35, 1);
 
-	--shadow-luxe: 0 18px 40px -20px rgb(22 32 27 / 0.45);
+	--shadow-luxe: 0 18px 40px -20px rgb(74 31 44 / 0.45);
 
 	/* ── Ambient animation ───────────────────────────────────── */
 	--animate-breathe: breathe 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
