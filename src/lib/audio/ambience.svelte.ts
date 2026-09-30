@@ -17,7 +17,7 @@ class Ambience {
 	#ensure(): HTMLAudioElement {
 		if (this.#el) return this.#el;
 
-		const el = new Audio('/audio/ambience.mp3');
+		const el = new Audio('/audio/ambience.m4a');
 		el.loop = true;
 		el.preload = 'none';
 		el.volume = 0;
