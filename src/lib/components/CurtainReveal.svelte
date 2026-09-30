@@ -694,6 +694,27 @@
 	/*
 		A slow travelling sheen, so the drape feels alive while it hangs. Gold at low
 		alpha only — it was measured invisible at full strength on a rose field.
+
+		THE BAND IS MOVED BY `transform`, NOT `background-position`.
+
+		`background-position` is not a compositable property, so animating it forces
+		a full repaint of this element every frame. This element is `inset: 0` of a
+		panel — half the viewport — carrying a gradient on a 260%-wide tile, so that
+		was ~170 gradient rasterisations per panel across the reveal, on the main
+		thread, competing with the gather for the same frames. `transform` is
+		composited, so the same motion costs nothing.
+
+		The two percentage systems are not interchangeable, which is where the odd
+		looking numbers below come from. The old keyframes were
+		`background-position: 130% 0` → `-30% 0`. A background-position percentage
+		resolves against (positioning area − image) = W − 2.6W = −1.6W, so those were
+		offsets of −1.6W × 1.3 = −2.08W and −1.6W × −0.3 = +0.48W. `translateX` takes
+		percentages of the element's own border box, so the same travel is −208% and
+		+48%. Identical motion, different units.
+
+		The band sits at 38–62% of the 2.6×W tile, i.e. 0.988W–1.612W from the tile's
+		left edge: off-panel at both endpoints, crossing the visible width mid-cycle.
+		`.panel` is `overflow: hidden`, so the translated pseudo-element is clipped.
 	*/
 	.panel::after {
 		content: '';
@@ -707,13 +728,16 @@
 			transparent 62%
 		);
 		background-size: 260% 100%;
+		/* Hold it on the compositor for the whole reveal, not just from the point
+		   the animation is first noticed. */
+		will-change: transform;
 		animation: sheen 9s var(--ease-silk, cubic-bezier(0.65, 0, 0.35, 1)) infinite;
 		/*
 			Gated and paused together while the cloth is withheld. `.panel` is opaque
 			for the whole reveal — it is `::before` that fades in on the break — so
 			pausing alone is not enough: the sheen would sit parked at
-			`background-position: 130% 0`, painting a soft band across the closed
-			field, and it would still be mid-screen over the revealed invitation.
+			`translateX(-208%)`, painting a soft band across the closed field, and it
+			would still be mid-screen over the revealed invitation.
 
 			Both flip on the same trigger as the texture, so the drape *starts* its
 			travel as the curtain parts rather than appearing mid-swing from page
@@ -730,10 +754,10 @@
 
 	@keyframes sheen {
 		from {
-			background-position: 130% 0;
+			transform: translateX(-208%);
 		}
 		to {
-			background-position: -30% 0;
+			transform: translateX(48%);
 		}
 	}
 

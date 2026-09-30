@@ -59,14 +59,27 @@
 		}
 	}
 
+	/*
+		Opacity only. The `scale` that used to be here is why the pulse is now
+		fade-only.
+
+		This runs on the seal's halo, which is `blur-[3px]`. A blur is
+		resolution-dependent, so scaling the element forces the browser to recompute
+		the blur at every new scale — a re-raster per frame, for as long as the guest
+		stares at the closed curtain (2.8s, infinite). `opacity` is composited and
+		costs nothing, so the pulse is now free.
+
+		What is lost: the ring no longer grows, so it reads as a fade rather than a
+		ripple. At a 3px blur the growth was subtle. Getting the expansion back would
+		mean getting the softness from a box-shadow instead of a filter, which is
+		only a partial win — a scaled shadow can also trigger a re-raster.
+	*/
 	@keyframes seal-pulse {
 		0%,
 		100% {
-			transform: scale(1);
 			opacity: 0.55;
 		}
 		50% {
-			transform: scale(1.28);
 			opacity: 0;
 		}
 	}
