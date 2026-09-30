@@ -1,0 +1,58 @@
+# Static build → GitHub Pages.
+#
+# Requires "Settings → Pages → Source: GitHub Actions" to be set once on the
+# repo, and a custom domain configured under "Custom domain". adapter-static
+# writes flat files to `build/`, which is uploaded here as the Pages artifact.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Lets you re-run a deploy from the Actions tab without a dummy commit.
+  workflow_dispatch:
+
+# Only the newest deploy may run. Without this, a second push can race a
+# half-finished upload and publish a mixed build.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm needs its own setup step; the runner's Node alone will not do.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # --frozen-lockfile so a deploy fails on a drifted lockfile rather than
+      # silently resolving different versions than the ones you committed.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
