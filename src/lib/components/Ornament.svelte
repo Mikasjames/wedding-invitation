@@ -6,7 +6,6 @@
 	let { class: className = '' }: Props = $props();
 </script>
 
-<!-- Gold filigree divider: a rule, a small diamond, a rule. -->
 <div class="flex items-center justify-center gap-3 {className}" aria-hidden="true">
 	<span class="h-px w-10 bg-gradient-to-r from-transparent to-gold/50"></span>
 	<svg viewBox="0 0 12 12" class="h-2 w-2 text-gold" fill="currentColor">
