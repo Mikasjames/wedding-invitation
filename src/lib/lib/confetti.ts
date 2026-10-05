@@ -3,14 +3,6 @@ import confetti from 'canvas-confetti';
 const GOLD = ['#d4af37', '#e3d0ae', '#a8852a', '#c9a227'];
 const PETAL = ['#ead3cb', '#e3d0ae', '#c08a6b'];
 
-/**
- * Three-stage burst fired from the centre seam as the wax seal breaks:
- * a core spray straight up, then two angled "door" cannons from the panel edges.
- * zIndex 120 keeps the canvas above the curtain overlay (z-50).
- *
- * Warm tones only — a plain white in the mix reads as generic party confetti
- * rather than gold leaf, which is the whole point of the palette.
- */
 export function sealBurst(enabled = true) {
 	if (!enabled) return;
 
