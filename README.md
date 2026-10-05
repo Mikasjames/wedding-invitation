@@ -1,42 +1,37 @@
-# sv
+# Wedding Invitation
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
-
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-pnpm dlx sv@0.17.1 create --template minimal --types ts --install pnpm wedding-invitation
-```
+A single-page wedding invitation built with SvelteKit, Tailwind CSS 4, and TypeScript. Fully static — no backend, deployed to GitHub Pages.
 
 ## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+```sh
+pnpm install
+pnpm dev
+```
+
+## Testing
 
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm test        # unit + e2e
+pnpm test:unit   # vitest
+pnpm test:e2e    # playwright
 ```
 
 ## Building
 
-To create a production version of your app:
-
 ```sh
-npm run build
+pnpm build
+pnpm preview
 ```
 
-You can preview the production build with `npm run preview`.
+## Deploying
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Pushes to `main` deploy via `.github/workflows/deploy.yml` to GitHub Pages.
+
+## Editing the invitation
+
+All copy and content live in `src/lib/lib/wedding.ts` — names, date, venue, story, events, dress code, RSVP endpoint, and registry links. Replace the placeholders there.
+
+- RSVP form: point `wedding.rsvp.endpoint` at your form handler (e.g. Formspree).
+- OG share image: `node artwork/build-og-image.mjs` regenerates `static/images/og.png`.
+- Plant illustrations: see `artwork/README.md`.

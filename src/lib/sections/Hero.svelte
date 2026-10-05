@@ -3,6 +3,18 @@
 	import Sprig from '$lib/components/Sprig.svelte';
 	import { wedding } from '$lib/lib/wedding';
 	import { reveal } from '$lib/state/reveal.svelte';
+	import { onMount } from 'svelte';
+
+	let now = $state(Date.now());
+	onMount(() => {
+		const id = setInterval(() => (now = Date.now()), 60_000);
+		return () => clearInterval(id);
+	});
+
+	const diff = $derived(Math.max(0, wedding.start.getTime() - now));
+	const days = $derived(Math.floor(diff / 86_400_000));
+	const hours = $derived(Math.floor((diff % 86_400_000) / 3_600_000));
+	const minutes = $derived(Math.floor((diff % 3_600_000) / 60_000));
 </script>
 
 <section class="relative grid min-h-[100svh] place-items-center overflow-hidden px-6 py-24">
@@ -60,6 +72,10 @@
 		</p>
 		<p class="mt-3 font-body text-[11px] font-medium tracking-[0.28em] text-ink/50 uppercase">
 			{wedding.city}
+		</p>
+
+		<p class="mt-8 font-body text-[11px] font-medium tracking-[0.28em] text-gold-deep uppercase">
+			{days} days · {hours} hours · {minutes} minutes
 		</p>
 	</div>
 </section>
