@@ -5,8 +5,6 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
 		<meta name="theme-color" content="#fdfbf7" />
-		<!-- The curtain is server-rendered, so guests without JS would be stuck
-		     staring at velvet. Unhide the invitation for them instead. -->
 		<noscript>
 			<style>
 				[data-curtain] {
@@ -17,11 +15,6 @@
 					transform: none !important;
 					pointer-events: auto !important;
 				}
-				/* The plants are clipped to nothing until `reveal.opened` flips
-				     a class on their container. Nothing can flip it without JS,
-				     so without this they would stay invisible for good — the
-				     invitation would render with two empty corners and no way
-				     to recover. Unclip them, same as the curtain above. */
 				img[data-sprig] {
 					clip-path: none !important;
 				}

@@ -5,19 +5,15 @@
 @import '@fontsource-variable/montserrat/wght.css';
 
 @theme {
-	/* ── Type ─────────────────────────────────────────────────── */
 	--font-display: 'Cormorant Garamond Variable', ui-serif, Georgia, serif;
 	--font-body: 'Montserrat Variable', ui-sans-serif, system-ui, sans-serif;
 
-	/* ── Palette ─────────────────────────────────────────────── */
 	--color-ivory: #fdfbf7;
 	--color-champagne: #f3e7d3;
 	--color-champagne-deep: #e3d0ae;
 	--color-blush: #ead3cb;
 	--color-rose: #d4a5a5;
 	--color-rose-deep: #bd8e8f;
-	/* Deepened from #d4af37. That gold measured 1.10:1 against the pink curtain —
-	   effectively invisible. This keeps the warm metal accent and stays legible. */
 	--color-gold: #7a5a20;
 	--color-gold-deep: #6b4f1c;
 	--color-bronze: #5c4318;
@@ -25,27 +21,18 @@
 	--color-forest-900: #4a1f2c;
 	--color-forest-800: #d4a5a5;
 	--color-forest-700: #bd8e8f;
-	/* Deep plum. The curtain's own microcopy and the wax seal.
-	   Gold cannot be used on a light drape — it measured 1.29:1 on the rose and
-	   1.04:1 on the original pink, so gold is confined to the interior, where it
-	   sits on ivory and passes comfortably. */
 	--color-plum: #4a1f2c;
 	--color-plum-soft: #7a3550;
-	/* Rose-gold: the seal bezel, bridging the plum seal and the rose curtain.
-	   4.89:1 on the seal, so the rim is legible rather than decorative. */
 	--color-rose-gold: #c98b7a;
 	--color-sage: #a7b49b;
 	--color-terracotta: #c08a6b;
 	--color-oxblood: #7a1f2b;
 
-	/* ── Motion ──────────────────────────────────────────────── */
-	/* CSS approximations of Svelte's quintOut / cubicInOut */
 	--ease-luxury: cubic-bezier(0.22, 1, 0.36, 1);
 	--ease-silk: cubic-bezier(0.65, 0, 0.35, 1);
 
 	--shadow-luxe: 0 18px 40px -20px rgb(74 31 44 / 0.45);
 
-	/* ── Ambient animation ───────────────────────────────────── */
 	--animate-breathe: breathe 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 	--animate-seal-pulse: seal-pulse 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 
@@ -59,21 +46,6 @@
 		}
 	}
 
-	/*
-		Opacity only. The `scale` that used to be here is why the pulse is now
-		fade-only.
-
-		This runs on the seal's halo, which is `blur-[3px]`. A blur is
-		resolution-dependent, so scaling the element forces the browser to recompute
-		the blur at every new scale — a re-raster per frame, for as long as the guest
-		stares at the closed curtain (2.8s, infinite). `opacity` is composited and
-		costs nothing, so the pulse is now free.
-
-		What is lost: the ring no longer grows, so it reads as a fade rather than a
-		ripple. At a 3px blur the growth was subtle. Getting the expansion back would
-		mean getting the softness from a box-shadow instead of a filter, which is
-		only a partial win — a scaled shadow can also trigger a re-raster.
-	*/
 	@keyframes seal-pulse {
 		0%,
 		100% {
