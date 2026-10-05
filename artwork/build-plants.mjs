@@ -1,34 +1,14 @@
-// Rewrites VTracer output into a single-ink, transparent illustration.
-//
-// VTracer emits everything as a <path fill="#..."> with a translate transform:
-// the "line art" is filled polygons, and the gaps between the strokes are filled
-// near-white. One of those near-white paths is a full-canvas backdrop, so the
-// raw files render as gold art on a cream rectangle.
-//
-// Two passes: collect the darkness range across ALL files first, so every
-// illustration shares one tonal scale (per-file normalisation would make one
-// illustration read darker than another for no reason), then emit.
-
 import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-// Paths resolve from this script's own location, so it runs from anywhere.
-const SRC_DIR = import.meta.dirname; // VTracer originals live beside it
-const OUT_DIR = join(SRC_DIR, '..', 'static', 'plants'); // shipped derivatives
+const SRC_DIR = import.meta.dirname;
+const OUT_DIR = join(SRC_DIR, '..', 'static', 'plants');
 
-// The source art's own gold, not --color-gold-deep. That token was deepened to
-// #7a5a20 for text contrast against the rose field, and at hairline stroke
-// width it turns the line art into a heavy bronze and fills the petals in.
-// This is a different visual register: source gold keeps the delicacy.
 const INK = '#CFB76F';
 
-const NEAR_WHITE_MIN = 0xef; // min(R,G,B) at or above this is backdrop or highlight
-const OPACITY_FLOOR = 0.12; // lightest surviving wash
-const OPACITY_CEIL = 1.0; // darkest surviving gold
-// Gamma > 1 pushes the light end down. The darkness histogram is bunched at
-// 0.10-0.15 (the pale interior washes), so a linear map lands the bulk of the
-// paths around 0.5 opacity and the petals read blotchy. This keeps the washes
-// faint and reserves the opacity budget for the line art.
+const NEAR_WHITE_MIN = 0xef;
+const OPACITY_FLOOR = 0.12;
+const OPACITY_CEIL = 1.0;
 const OPACITY_GAMMA = 1.6;
 
 const NAMES = ['plant_1', 'plant_2', 'plant_3'];
@@ -55,7 +35,6 @@ function parse(name) {
 
 const files = NAMES.map(parse);
 
-// Pass 1 — global darkness bounds over the paths that survive the near-white cut.
 const isNearWhite = (p) => Math.min(...hexToRgb(p.fill)) >= NEAR_WHITE_MIN;
 const kept = files.flatMap((f) => f.paths).filter((p) => !isNearWhite(p));
 const darks = kept.map((p) => darknessOf(p.fill));
@@ -67,7 +46,6 @@ const opacityFor = (fill) => {
 	return +(OPACITY_FLOOR + (OPACITY_CEIL - OPACITY_FLOOR) * norm ** OPACITY_GAMMA).toFixed(2);
 };
 
-// Pass 2 — emit.
 mkdirSync(OUT_DIR, { recursive: true });
 
 const report = [];
@@ -81,21 +59,7 @@ for (const f of files) {
 		})
 		.join('\n');
 
-	const out = `<!--
-	Single-ink, transparent. Derived from artwork/${f.name}.svg (VTracer output).
-
-	Near-white fills are dropped: one was a full-canvas backdrop, the rest were
-	stroke gaps. On an ivory ground they are invisible, and keeping them would
-	turn them into visible gold smudges. Every surviving fill becomes the
-	inherited ink with fill-opacity carrying the original tone, so one colour
-	drives the whole illustration.
-
-	Colour is on the root <svg> as a presentation attribute, not currentColor:
-	this is loaded via <img>, and an SVG in an <img> is a separate document that
-	cannot inherit the page's color. Setting it here is the only thing that tints
-	the art without inlining ~100KB of path data into the prerendered HTML.
--->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f.W} ${f.H}" width="${f.W}" height="${f.H}" fill="${INK}">
+	const out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f.W} ${f.H}" width="${f.W}" height="${f.H}" fill="${INK}">
 ${body}
 </svg>
 `;
