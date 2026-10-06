@@ -4,7 +4,7 @@ import { join } from 'node:path';
 const SRC_DIR = import.meta.dirname;
 const OUT_DIR = join(SRC_DIR, '..', 'static', 'plants');
 
-const INK = '#CFB76F';
+const INK = '#9ba3ac';
 
 const NEAR_WHITE_MIN = 0xef;
 const OPACITY_FLOOR = 0.12;
