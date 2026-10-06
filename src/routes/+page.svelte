@@ -1,5 +1,5 @@
 <script lang="ts">
-	import CurtainReveal from '$lib/components/CurtainReveal.svelte';
+	import Reveal from '$lib/components/Reveal.svelte';
 	import Hero from '$lib/sections/Hero.svelte';
 	import Story from '$lib/sections/Story.svelte';
 	import Events from '$lib/sections/Events.svelte';
@@ -23,11 +23,11 @@
 	<meta name="twitter:image" content="/images/og.png" />
 </svelte:head>
 
-<CurtainReveal monogram={wedding.monogram} hint="Tap the seal to open">
+<Reveal kind="envelope" monogram={wedding.monogram} hint="Tap the seal to open">
 	<Hero />
 	<Story />
 	<Events />
 	<Attire />
 	<Rsvp />
 	<Registry />
-</CurtainReveal>
+</Reveal>

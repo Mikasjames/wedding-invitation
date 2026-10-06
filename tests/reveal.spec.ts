@@ -8,7 +8,7 @@ test('seal click reveals the invitation', async ({ page }) => {
 
 	await seal.click();
 
-	await expect(page.locator('[data-curtain]')).toHaveClass(/invisible/, {
+	await expect(page.locator('[data-envelope]')).toHaveClass(/invisible/, {
 		timeout: 10_000
 	});
 	await expect(page.getByText('Save the date')).toBeVisible();
@@ -17,10 +17,10 @@ test('seal click reveals the invitation', async ({ page }) => {
 test.describe('no JS', () => {
 	test.use({ javaScriptEnabled: false });
 
-	test('invitation is visible without the curtain', async ({ page }) => {
+	test('invitation is visible without the envelope', async ({ page }) => {
 		await page.goto('/');
 
-		await expect(page.locator('[data-curtain]')).toBeHidden();
+		await expect(page.locator('[data-envelope]')).toBeHidden();
 		await expect(page.getByText('Save the date')).toBeVisible();
 	});
 });

@@ -6,7 +6,7 @@ test.describe('reduced motion', () => {
 	test('reveal completes quickly without animation', async ({ page }) => {
 		await page.goto('/');
 		await page.getByRole('button', { name: 'Open the invitation' }).click();
-		await expect(page.locator('[data-curtain]')).toHaveClass(/invisible/, { timeout: 3_000 });
+		await expect(page.locator('[data-envelope]')).toHaveClass(/invisible/, { timeout: 3_000 });
 		await expect(page.getByText('Save the date')).toBeVisible();
 	});
 });
