@@ -3,7 +3,7 @@
 	import { wedding } from '$lib/lib/wedding';
 </script>
 
-<section class="bg-champagne/30 px-6 py-24">
+<section class="bg-powder/40 px-6 py-24">
 	<div class="mx-auto flex max-w-xl flex-col items-center text-center">
 		<p class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
 			The Day
