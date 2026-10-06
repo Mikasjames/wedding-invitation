@@ -1,6 +1,7 @@
 {
 	"name": "wedding-invitation",
 	"private": true,
+	"packageManager": "pnpm@11.28.4",
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
