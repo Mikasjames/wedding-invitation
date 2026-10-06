@@ -245,33 +245,19 @@
 					onclick={handleOpen}
 					disabled={breaking}
 					aria-label="Open the invitation"
-					class="seal group relative grid h-32 w-32 place-items-center disabled:cursor-default"
+					class="seal group relative cursor-pointer disabled:cursor-default"
 				>
-					<span
-						class="pointer-events-none absolute inset-0 -z-10 rounded-full border border-rose-gold/60
-						       blur-[3px] animate-seal-pulse"
+					<img
+						src="/seal.svg"
+						alt=""
 						aria-hidden="true"
-					></span>
+						class="relative z-10 h-32 w-32 object-contain drop-shadow-[0_18px_24px_rgb(91_104_115/0.45)]"
+					/>
 
-					<span
-						class="absolute inset-[7px] rounded-full border border-rose-gold/80 blur-[0.3px]
-						       shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]"
-						aria-hidden="true"
-					></span>
-
-					<span
-						class="relative z-10 font-display text-[1.65rem] font-medium tracking-[0.06em]
-						       text-champagne"
-						style="text-shadow: 0 1px 0 rgb(0 0 0 / 0.35), 0 -1px 1px rgb(255 255 255 / 0.18)"
-					>
-						{monogram}
-					</span>
-
-					<span class="seal-blemish" aria-hidden="true"></span>
 				</button>
 
 				<p
-					class="mt-8 font-body text-[10px] font-medium tracking-[0.3em] text-plum
+					class="mt-8 font-body text-[10px] font-medium tracking-[0.3em] text-champagne
 					       uppercase animate-breathe transition-opacity duration-500 ease-luxury
 					       {breaking ? 'opacity-0' : 'opacity-100'}"
 				>
@@ -392,20 +378,6 @@
 	}
 
 	.seal {
-		background:
-			radial-gradient(
-				circle at 36% 28%,
-				#8d99a6 0%,
-				#74838f 38%,
-				#5f6d78 70%,
-				#4f5b66 100%
-			);
-		border-radius: 47% 53% 52% 48% / 53% 47% 53% 47%;
-		box-shadow:
-			0 18px 38px -14px rgb(91 104 115 / 0.55),
-			0 0 0 1px rgb(91 104 115 / 0.3),
-			inset 0 2px 4px rgb(255 255 255 / 0.14),
-			inset 0 -8px 16px rgb(0 0 0 / 0.4);
 		transition:
 			transform 700ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)),
 			opacity 700ms ease-out;
@@ -425,16 +397,6 @@
 	.seal:disabled {
 		transform: translateY(-30px) rotate(-7deg) scale(1.14);
 		opacity: 0;
-	}
-
-	.seal-blemish {
-		position: absolute;
-		inset: 0;
-		border-radius: inherit;
-		pointer-events: none;
-		opacity: 0.3;
-		mix-blend-mode: soft-light;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 	}
 
 	@media (prefers-reduced-motion: reduce) {
