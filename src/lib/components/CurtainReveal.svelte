@@ -226,7 +226,7 @@
 		<div
 			class="pointer-events-none absolute inset-0 transition-opacity duration-[2000ms]
 			       ease-luxury {breaking ? 'opacity-0' : 'opacity-100'}"
-			style="box-shadow: inset 0 0 170px rgb(74 31 44 / 0.55)"
+			style="box-shadow: inset 0 0 170px rgb(91 104 115 / 0.55)"
 			aria-hidden="true"
 		></div>
 
@@ -351,7 +351,7 @@
 		background: linear-gradient(
 			105deg,
 			transparent 38%,
-			rgb(255 244 240 / 0.12) 50%,
+			rgb(235 222 213 / 0.12) 50%,
 			transparent 62%
 		);
 		background-size: 260% 100%;
@@ -395,15 +395,15 @@
 		background:
 			radial-gradient(
 				circle at 36% 28%,
-				#a3313f 0%,
-				#8a2434 38%,
-				#6b1a28 70%,
-				#5c1622 100%
+				#8d99a6 0%,
+				#74838f 38%,
+				#5f6d78 70%,
+				#4f5b66 100%
 			);
 		border-radius: 47% 53% 52% 48% / 53% 47% 53% 47%;
 		box-shadow:
-			0 18px 38px -14px rgb(74 31 44 / 0.55),
-			0 0 0 1px rgb(74 31 44 / 0.3),
+			0 18px 38px -14px rgb(91 104 115 / 0.55),
+			0 0 0 1px rgb(91 104 115 / 0.3),
 			inset 0 2px 4px rgb(255 255 255 / 0.14),
 			inset 0 -8px 16px rgb(0 0 0 / 0.4);
 		transition:

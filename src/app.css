@@ -8,30 +8,31 @@
 	--font-display: 'Cormorant Garamond Variable', ui-serif, Georgia, serif;
 	--font-body: 'Montserrat Variable', ui-sans-serif, system-ui, sans-serif;
 
-	--color-ivory: #fdfbf7;
-	--color-champagne: #f3e7d3;
-	--color-champagne-deep: #e3d0ae;
-	--color-blush: #ead3cb;
-	--color-rose: #d4a5a5;
-	--color-rose-deep: #bd8e8f;
-	--color-gold: #7a5a20;
-	--color-gold-deep: #6b4f1c;
-	--color-bronze: #5c4318;
-	--color-ink: #1c1917;
-	--color-forest-900: #4a1f2c;
-	--color-forest-800: #d4a5a5;
-	--color-forest-700: #bd8e8f;
-	--color-plum: #4a1f2c;
-	--color-plum-soft: #7a3550;
-	--color-rose-gold: #c98b7a;
-	--color-sage: #a7b49b;
-	--color-terracotta: #c08a6b;
-	--color-oxblood: #7a1f2b;
+	--color-ivory: #ebded5;
+	--color-champagne: #ddc9b4;
+	--color-champagne-deep: #cdb59b;
+	--color-blush: #d8d9de;
+	--color-rose: #9ba3ac;
+	--color-rose-deep: #74838f;
+	--color-gold: #74838f;
+	--color-gold-deep: #5f6d78;
+	--color-bronze: #55636e;
+	--color-ink: #3e4854;
+	--color-forest-900: #3e4854;
+	--color-forest-800: #74838f;
+	--color-forest-700: #9ba3ac;
+	--color-plum: #74838f;
+	--color-plum-soft: #9ba3ac;
+	--color-rose-gold: #cdb59b;
+	--color-sage: #c4c6cd;
+	--color-terracotta: #9ba3ac;
+	--color-oxblood: #5b6873;
+	--color-powder: #c4c6cd;
 
 	--ease-luxury: cubic-bezier(0.22, 1, 0.36, 1);
 	--ease-silk: cubic-bezier(0.65, 0, 0.35, 1);
 
-	--shadow-luxe: 0 18px 40px -20px rgb(74 31 44 / 0.45);
+	--shadow-luxe: 0 18px 40px -20px rgb(116 131 143 / 0.45);
 
 	--animate-breathe: breathe 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 	--animate-seal-pulse: seal-pulse 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;

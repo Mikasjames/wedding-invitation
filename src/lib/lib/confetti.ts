@@ -1,7 +1,7 @@
 import confetti from 'canvas-confetti';
 
-const GOLD = ['#d4af37', '#e3d0ae', '#a8852a', '#c9a227'];
-const PETAL = ['#ead3cb', '#e3d0ae', '#c08a6b'];
+const GOLD = ['#ddc9b4', '#cdb59b', '#c4c6cd', '#ebded5'];
+const PETAL = ['#9ba3ac', '#c4c6cd', '#74838f'];
 
 export function sealBurst(enabled = true) {
 	if (!enabled) return;
