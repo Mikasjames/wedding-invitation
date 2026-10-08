@@ -51,18 +51,18 @@
 		</p>
 
 		<h1
-			class="mt-6 font-display text-[clamp(3rem,15vw,4.5rem)] leading-[1.04] font-light
-			       tracking-[0.01em] text-ink"
+			class="mt-6 font-names text-[clamp(3rem,15vw,4.5rem)] leading-[1.08] font-light
+			       tracking-[0.04em] text-ink"
 		>
-			<span class="block italic">{wedding.names.split(' & ')[0]}</span>
+			<span class="block">{wedding.names.split(' & ')[0]}</span>
 			<span
-				class="my-5 block font-display font-normal text-gold italic"
+				class="my-5 block font-names font-normal text-gold"
 				style="font-size: clamp(1.5rem, 6vw, 2.25rem)"
 				aria-hidden="true"
 			>
 				&amp;
 			</span>
-			<span class="block italic">{wedding.names.split(' & ')[1]}</span>
+			<span class="block">{wedding.names.split(' & ')[1]}</span>
 		</h1>
 
 		<Ornament class="my-8" />
