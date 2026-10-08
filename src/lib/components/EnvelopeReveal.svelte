@@ -117,9 +117,9 @@
 		aria-label="Wedding invitation — press the seal to open"
 	>
 		<div class="scene absolute inset-0" class:is-leaving={leaving}>
-			<div class="backdrop absolute inset-0" aria-hidden="true"></div>
+			<div class="paper absolute inset-0" aria-hidden="true"></div>
 
-			<div class="absolute inset-0 grid place-items-center px-6" style="perspective: 1400px">
+			<div class="folds absolute inset-0">
 				<div class="envelope" data-phase={phase}>
 					<div class="env-back" aria-hidden="true"></div>
 
@@ -143,15 +143,19 @@
 					</div>
 
 					<div class="pocket-wrap" aria-hidden="true">
+						<div class="pocket pocket-bottom"></div>
 						<div class="pocket pocket-left"></div>
 						<div class="pocket pocket-right"></div>
-						<div class="pocket pocket-bottom"></div>
 					</div>
 
-					<div class="flap" aria-hidden="true">
-						<div class="flap-face flap-front"></div>
-						<div class="flap-face flap-liner"></div>
+					<div class="flap-wrap" aria-hidden="true">
+						<div class="flap">
+							<div class="flap-face flap-front"></div>
+							<div class="flap-face flap-liner"></div>
+						</div>
 					</div>
+
+					<div class="envelope-texture" aria-hidden="true"></div>
 
 					<button
 						bind:this={sealEl}
@@ -161,24 +165,21 @@
 						aria-label="Open the invitation"
 						class="seal group cursor-pointer disabled:cursor-default"
 					>
-						<img
-							src="/seal.svg"
-							alt=""
-							aria-hidden="true"
-							class="relative z-10 h-24 w-24 object-contain drop-shadow-[0_18px_24px_rgb(91_104_115/0.45)] sm:h-28 sm:w-28"
-						/>
+						<img src="/seal.svg" alt="" aria-hidden="true" class="seal-wax" />
 					</button>
 				</div>
-
-				<p
-					class="absolute bottom-[9%] left-1/2 -translate-x-1/2 font-body text-[10px] font-medium
-					       tracking-[0.3em] whitespace-nowrap text-gold-deep uppercase animate-breathe
-					       transition-opacity duration-500 ease-luxury
-					       {breaking ? 'opacity-0' : 'opacity-100'}"
-				>
-					{hint}
-				</p>
 			</div>
+
+			<div class="glaze absolute inset-0" aria-hidden="true"></div>
+
+			<p
+				class="hint absolute bottom-[7%] left-1/2 z-10 -translate-x-1/2 font-body text-[10px] font-medium
+				       tracking-[0.3em] whitespace-nowrap text-gold-deep uppercase animate-breathe
+				       transition-opacity duration-500 ease-luxury
+				       {breaking ? 'opacity-0' : 'opacity-100'}"
+			>
+				{hint}
+			</p>
 		</div>
 	</div>
 </div>
@@ -188,13 +189,11 @@
 {/if}
 
 <style>
-	.backdrop {
-		background:
-			radial-gradient(120% 90% at 50% 38%, transparent 52%, rgb(62 72 84 / 0.16)),
-			linear-gradient(165deg, var(--color-ivory) 30%, var(--color-champagne) 145%);
-	}
-
 	.scene {
+		--paper: #17446d;
+		--apex: 47%;
+		--radius: 10px;
+		--column: min(86vw, 60svh, 460px);
 		transition:
 			opacity 520ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)),
 			transform 520ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1));
@@ -205,28 +204,50 @@
 		transform: translateY(14px) scale(0.99);
 	}
 
+	.paper {
+		z-index: 0;
+		background: var(--paper);
+		pointer-events: none;
+	}
+
+	.glaze {
+		z-index: 3;
+		background:
+			radial-gradient(58% 42% at 20% 15%, rgb(255 255 255 / 0.5), transparent 62%),
+			radial-gradient(52% 48% at 84% 82%, rgb(140 152 162 / 0.22), transparent 66%),
+			radial-gradient(130% 95% at 50% 44%, transparent 50%, rgb(62 72 84 / 0.14));
+		pointer-events: none;
+	}
+
+	.folds {
+		z-index: 2;
+		display: grid;
+		place-items: center;
+		padding: 6%;
+	}
+
 	.envelope {
 		position: relative;
-		width: min(88vw, 90svh, 560px);
-		aspect-ratio: 1.45;
-		transform-style: preserve-3d;
+		width: var(--column);
+		aspect-ratio: 0.72;
+		border-radius: var(--radius);
 	}
 
 	.env-back {
 		position: absolute;
 		inset: 0;
 		z-index: 0;
-		border-radius: 10px;
-		background: linear-gradient(150deg, var(--color-champagne) 10%, var(--color-champagne-deep) 90%);
+		border-radius: var(--radius);
+		background: linear-gradient(160deg, #d3d9dd, #c8d0d6);
 		box-shadow: var(--shadow-luxe, 0 18px 40px -20px rgb(116 131 143 / 0.45));
 	}
 
 	.letter {
 		position: absolute;
-		left: 5%;
-		right: 5%;
-		top: 6%;
-		height: 92%;
+		left: 9%;
+		right: 9%;
+		top: 12%;
+		height: 74%;
 		z-index: 1;
 		display: flex;
 		flex-direction: column;
@@ -234,13 +255,15 @@
 		justify-content: center;
 		padding: 9% 6% 6%;
 		text-align: center;
-		background: linear-gradient(to bottom, #f2ebe3, var(--color-ivory) 55%);
-		border: 1px solid rgb(255 255 255 / 0.65);
+		background: linear-gradient(to bottom, #f6f1e9, #f2ebe3 55%);
+		border: 1px solid rgb(255 255 255 / 0.7);
 		border-radius: 6px;
 		box-shadow: 0 2px 6px rgb(62 72 84 / 0.14);
+		pointer-events: none;
 		transition:
 			transform 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)),
 			box-shadow 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1));
+		transition-delay: 80ms;
 		will-change: transform;
 	}
 
@@ -256,7 +279,7 @@
 		inset: 0;
 		z-index: 2;
 		overflow: hidden;
-		border-radius: 10px;
+		border-radius: var(--radius);
 		pointer-events: none;
 	}
 
@@ -266,19 +289,34 @@
 	}
 
 	.pocket-left {
-		clip-path: polygon(0 0, 63% 50%, 0 100%);
-		background: linear-gradient(100deg, #d3bda6, var(--color-champagne) 70%);
+		clip-path: polygon(0 0, 50% var(--apex), 0 100%);
+		background: linear-gradient(105deg, #e0e4e7, #d7dde1 70%);
+		filter: drop-shadow(3px 5px 5px rgb(62 72 84 / 0.2));
 	}
 
 	.pocket-right {
-		clip-path: polygon(100% 0, 37% 50%, 100% 100%);
-		background: linear-gradient(260deg, #d3bda6, var(--color-champagne) 70%);
+		clip-path: polygon(100% 0, 50% var(--apex), 100% 100%);
+		background: linear-gradient(255deg, #dce1e4, #d3dade 70%);
+		filter: drop-shadow(3px 5px 5px rgb(62 72 84 / 0.2));
 	}
 
 	.pocket-bottom {
-		clip-path: polygon(0 100%, 50% 26%, 100% 100%);
-		background: linear-gradient(to top, var(--color-champagne-deep), #e0ccb9 85%);
-		filter: drop-shadow(0 -3px 4px rgb(62 72 84 / 0.14));
+		clip-path: polygon(0 100%, 50% var(--apex), 100% 100%);
+		background: linear-gradient(to top, #ccd4da, #d7dde2 90%);
+	}
+
+	.flap-wrap {
+		position: absolute;
+		inset: 0;
+		z-index: 3;
+		perspective: 1400px;
+		pointer-events: none;
+	}
+
+	.envelope[data-phase='letter'] .flap-wrap,
+	.envelope[data-phase='leaving'] .flap-wrap,
+	.envelope[data-phase='gone'] .flap-wrap {
+		z-index: 0;
 	}
 
 	.flap {
@@ -286,8 +324,8 @@
 		top: 0;
 		left: 0;
 		right: 0;
-		height: 50%;
-		z-index: 3;
+		height: var(--apex);
+		clip-path: inset(0 round var(--radius) var(--radius) 0 0);
 		transform-origin: 50% 0%;
 		transform-style: preserve-3d;
 		pointer-events: none;
@@ -303,12 +341,14 @@
 	}
 
 	.flap-front {
-		background: linear-gradient(to bottom, var(--color-champagne) 55%, var(--color-champagne-deep));
+		background: linear-gradient(168deg, #e6eaec, #d9dfe3);
+		filter: drop-shadow(4px 7px 6px rgb(62 72 84 / 0.18));
 	}
 
 	.flap-liner {
 		transform: rotateX(180deg);
-		background: linear-gradient(to top, var(--color-blush), #ececef 70%);
+		background: linear-gradient(to top, #c9d1d7, #dee4e8 70%);
+		filter: drop-shadow(-4px 6px 5px rgb(62 72 84 / 0.18));
 	}
 
 	.envelope[data-phase='flap'] .flap,
@@ -320,31 +360,73 @@
 
 	@keyframes flap-open {
 		0% {
-			transform: rotateX(0deg) scaleY(1);
-			z-index: 3;
-		}
-		49.9% {
-			z-index: 3;
-		}
-		50% {
-			z-index: 0;
+			transform: rotateX(0deg);
 		}
 		100% {
-			transform: rotateX(-180deg) scaleY(0.04);
-			z-index: 0;
+			transform: rotateX(-180deg);
 		}
+	}
+
+	.envelope-texture {
+		position: absolute;
+		inset: 0;
+		z-index: 4;
+		overflow: hidden;
+		border-radius: var(--radius);
+		pointer-events: none;
+	}
+
+	.envelope-texture::before,
+	.envelope-texture::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background-image: url('/lace.svg');
+		background-repeat: repeat;
+		background-size: 140px 140px;
+	}
+
+	.envelope-texture::before {
+		opacity: 0.11;
+		translate: 1px 1.1px;
+	}
+
+	.envelope-texture::after {
+		opacity: 0.15;
+		translate: -0.9px -1px;
+		filter: brightness(0) invert(1);
 	}
 
 	.seal {
 		position: absolute;
 		left: 50%;
-		top: 50%;
+		top: var(--apex);
 		translate: -50% -50%;
-		z-index: 4;
+		z-index: 5;
+		width: clamp(88px, 24%, 128px);
+		aspect-ratio: 432 / 446;
 		border-radius: 9999px;
 		transition:
 			transform 420ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)),
 			opacity 420ms ease-out;
+	}
+
+	.seal-wax {
+		display: block;
+		width: 100%;
+		filter:
+			drop-shadow(7px 13px 14px rgb(62 72 84 / 0.3))
+			drop-shadow(1px 2px 2px rgb(62 72 84 / 0.18));
+	}
+
+	.seal::after {
+		content: '';
+		position: absolute;
+		inset: 4%;
+		border-radius: 9999px;
+		box-shadow: 0 0 26px 10px rgb(116 131 143 / 0.32);
+		opacity: 0;
+		transition: opacity 240ms ease-out;
 	}
 
 	.seal:hover:not(:disabled) {
@@ -354,8 +436,10 @@
 		transform: translateY(0) scale(0.985);
 	}
 	.seal:focus-visible {
-		outline: 2px solid var(--color-gold);
-		outline-offset: 6px;
+		outline: none;
+	}
+	.seal:focus-visible::after {
+		opacity: 1;
 	}
 
 	.seal:disabled {
@@ -372,6 +456,10 @@
 		}
 		.letter {
 			transition-duration: 240ms;
+			transition-delay: 0ms;
+		}
+		.flap-wrap {
+			animation: none !important;
 		}
 		.seal {
 			transition-duration: 240ms;
