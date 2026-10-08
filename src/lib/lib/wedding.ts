@@ -1,4 +1,4 @@
-const start = new Date('2027-06-12T16:00:00+08:00');
+const start = new Date('2027-02-09T16:00:00+16:00');
 
 export const wedding = {
 	names: 'Michal & Lemuel',
@@ -10,9 +10,9 @@ export const wedding = {
 
 	start,
 
-	dateLabel: 'Saturday, 12 June 2027',
+	dateLabel: 'Tuesday, 9 February 2027',
 
-	dateShort: '12 · 06 · 2027',
+	dateShort: '02 · 09 · 2027',
 
 	timeLabel: 'Four in the afternoon, until the small hours',
 
@@ -26,7 +26,7 @@ export const wedding = {
 
 	reception: {
 		name: 'The Reception',
-		venue: 'To be announced',
+		venue: 'Rio Delta',
 		address: 'Tanza, Cavite, Philippines'
 	},
 
@@ -36,26 +36,19 @@ export const wedding = {
 
 	events: [
 		{
-			name: 'Arrival & Welcome Drinks',
-			time: '3:30 PM',
-			venue: 'Tanza, Cavite, Philippines',
-			description: 'Gather, mingle, and ease into the evening.'
-		},
-		{
 			name: 'The Ceremony',
 			time: '4:00 PM',
-			venue: 'To be announced',
+			venue: 'Kingdom Hall of Jehovah\'s Witnesses, Tanza, Cavite, Philippines',
 			description: 'Vows, music, and the moment itself.'
 		},
 		{
 			name: 'Reception & After-Party',
 			time: '6:00 PM',
-			venue: 'To be announced',
+			venue: 'Rio Delta',
 			description: 'Dinner, speeches, dancing, and far too much champagne.'
 		}
 	],
-
-	dressCode: {
+dressCode: {
 		title: 'Barong Tagalog / Filipiniana',
 		description:
 			'Placeholder: formal barong or gown in earth tones. Filipiniana welcome. Replace with your actual dress code.'
