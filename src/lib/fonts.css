@@ -1,0 +1,20 @@
+/*
+ * Webfonts for the /fonts/ specimen gallery.
+ *
+ * Latin subset on purpose: the bare `400.css` entries pull in the Cyrillic,
+ * Greek and Vietnamese subsets too, which is wasteful once a page carries a
+ * dozen families. Only the gallery-exclusive faces belong here: Pinyon Script,
+ * Cormorant Garamond and Montserrat are already global via `app.css`. Cormorant
+ * SC is listed rather than living in `app.css` because nothing sets copy in it
+ * any more; it is kept only as the face the hero names replaced.
+ */
+@import '@fontsource/cormorant-sc/latin-400.css';
+@import '@fontsource/petit-formal-script/latin-400.css';
+@import '@fontsource/allura/latin-400.css';
+@import '@fontsource/monsieur-la-doulaise/latin-400.css';
+@import '@fontsource/great-vibes/latin-400.css';
+@import '@fontsource/italianno/latin-400.css';
+@import '@fontsource/ephesis/latin-400.css';
+@import '@fontsource/tangerine/latin-400.css';
+@import '@fontsource/sacramento/latin-400.css';
+@import '@fontsource/parisienne/latin-400.css';

@@ -14,10 +14,37 @@ importers:
       '@fontsource-variable/montserrat':
         specifier: ^5.3.0
         version: 5.3.0
+      '@fontsource/allura':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fontsource/cormorant-sc':
         specifier: ^5.3.0
         version: 5.3.0
+      '@fontsource/ephesis':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/great-vibes':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/italianno':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/monsieur-la-doulaise':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/parisienne':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/petit-formal-script':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fontsource/pinyon-script':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/sacramento':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/tangerine':
         specifier: ^5.3.0
         version: 5.3.0
       canvas-confetti:
@@ -78,11 +105,38 @@ packages:
   '@fontsource-variable/montserrat@5.3.0':
     resolution: {integrity: sha512-7PaZoxaxrWLAyrhO46v65An9LhUhfkTExWLhfbywYZCnZEgg/W1rEHnlNmZKjNZ3nJTVYyicqxlJt10z/26yTA==}
 
+  '@fontsource/allura@5.3.0':
+    resolution: {integrity: sha512-UqloNNVxl03+psvtIXCYuo7/v2mD9XmX2HGiczhK6NmDDwbFJJDjrbHZ5tpNuVXKsMEQPc46tZu3hewYN82/YA==}
+
   '@fontsource/cormorant-sc@5.3.0':
     resolution: {integrity: sha512-4iTWFRwm6x6UJ2tJpcMYShL2KLgLSwiXt5KTPSe6GHpDr54ZzkH3/JXXvczGWV3MnzTUc4PCqPsbh/VLNPlxGg==}
 
+  '@fontsource/ephesis@5.3.0':
+    resolution: {integrity: sha512-z5A0U5xLq1mu3Zk/z0QPkZaFnq7Y4yERxhcdWAMjHdu4AgT7w/QjJs+JNJES9C1sv8qp5iioo7kS9dl5krSCFA==}
+
+  '@fontsource/great-vibes@5.3.0':
+    resolution: {integrity: sha512-1w60cXzXnC9V4y943po8044O1mqRQBiTTK75h7OpZE+1VQtx+KlAAzoIyEE5KNzu05gUpxaCQg7cbL7ITSwegQ==}
+
+  '@fontsource/italianno@5.3.0':
+    resolution: {integrity: sha512-zbI5nY80P4BB1OppKFFnUs8vMKgrbQW1zI0LQ74KR5sD6lmczcJdimM9X7TDIo3auanCRqgYpNSMH341v+7C/Q==}
+
+  '@fontsource/monsieur-la-doulaise@5.3.0':
+    resolution: {integrity: sha512-BiXcax07rSQX8vtg/GFzjen/nn+3YJqS7YyVNIIz9aFYqjMsxEDxqZmKThnSO6aprmbxYxEFAVgZvR1P8mIG1A==}
+
+  '@fontsource/parisienne@5.3.0':
+    resolution: {integrity: sha512-YbfjZDYy7FMTVE0HRgejkGX3T5iFfgagOYtAAAymq9GklviFAZ1GqIdlyviNe23TiR20f2K7zxsL4AECtWnkEQ==}
+
+  '@fontsource/petit-formal-script@5.3.0':
+    resolution: {integrity: sha512-tBsoEOWIbK1Kjf/X2hBi8kKlzHPoBS9xPYOhy4NfkG6fTMSR0Nth8Puute+rYSNn9W97d+6Zs4ZIDytHceRRyg==}
+
   '@fontsource/pinyon-script@5.3.0':
     resolution: {integrity: sha512-ilhy4l5apzyDkfuKb7PZBUT5Sf6nfxucdXT5TQ0wQDyWtDPlouLy1lQq3lMEPk1lPsHHVrd11EkPnEG8FqDgUA==}
+
+  '@fontsource/sacramento@5.3.0':
+    resolution: {integrity: sha512-KkqN52aTsJ0pSBva/NREqFljs0M1TwMIpNcqdSQc2EKR/mVU1CvM2dazf9eG19rHMTIssjbia83nGG705SlD1w==}
+
+  '@fontsource/tangerine@5.3.0':
+    resolution: {integrity: sha512-3lR9JgNxpx8M68A5w70eb72BwVhtAFZ4Qq16S8x152+pbF4AjM/vau3ki1AlDwgARB216koqwk/9jQTVDpCP3Q==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -926,9 +980,27 @@ snapshots:
 
   '@fontsource-variable/montserrat@5.3.0': {}
 
+  '@fontsource/allura@5.3.0': {}
+
   '@fontsource/cormorant-sc@5.3.0': {}
 
+  '@fontsource/ephesis@5.3.0': {}
+
+  '@fontsource/great-vibes@5.3.0': {}
+
+  '@fontsource/italianno@5.3.0': {}
+
+  '@fontsource/monsieur-la-doulaise@5.3.0': {}
+
+  '@fontsource/parisienne@5.3.0': {}
+
+  '@fontsource/petit-formal-script@5.3.0': {}
+
   '@fontsource/pinyon-script@5.3.0': {}
+
+  '@fontsource/sacramento@5.3.0': {}
+
+  '@fontsource/tangerine@5.3.0': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
