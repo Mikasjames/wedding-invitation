@@ -155,8 +155,6 @@
 						</div>
 					</div>
 
-					<div class="envelope-texture" aria-hidden="true"></div>
-
 					<button
 						bind:this={sealEl}
 						type="button"
@@ -367,31 +365,38 @@
 		}
 	}
 
-	.envelope-texture {
-		position: absolute;
-		inset: 0;
-		z-index: 4;
-		overflow: hidden;
-		border-radius: var(--radius);
-		pointer-events: none;
-	}
-
-	.envelope-texture::before,
-	.envelope-texture::after {
+	.env-back::before,
+	.env-back::after,
+	.pocket::before,
+	.pocket::after,
+	.flap-front::before,
+	.flap-front::after,
+	.flap-liner::before,
+	.flap-liner::after {
 		content: '';
 		position: absolute;
 		inset: 0;
+		border-radius: inherit;
 		background-image: url('/lace.svg');
 		background-repeat: repeat;
 		background-size: 140px 140px;
+		pointer-events: none;
+		backface-visibility: hidden;
+		-webkit-backface-visibility: hidden;
 	}
 
-	.envelope-texture::before {
+	.env-back::before,
+	.pocket::before,
+	.flap-front::before,
+	.flap-liner::before {
 		opacity: 0.11;
 		translate: 1px 1.1px;
 	}
 
-	.envelope-texture::after {
+	.env-back::after,
+	.pocket::after,
+	.flap-front::after,
+	.flap-liner::after {
 		opacity: 0.15;
 		translate: -0.9px -1px;
 		filter: brightness(0) invert(1);
