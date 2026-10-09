@@ -7,10 +7,12 @@
 @import '@fontsource/cormorant-sc/300.css';
 @import '@fontsource/cormorant-sc/400.css';
 
+@import '@fontsource/pinyon-script/400.css';
+
 @theme {
 	--font-display: 'Cormorant Garamond Variable', ui-serif, Georgia, serif;
 	--font-body: 'Montserrat Variable', ui-sans-serif, system-ui, sans-serif;
-	--font-names: 'Cormorant SC', 'Cormorant Garamond Variable', ui-serif, Georgia, serif;
+	--font-names: 'Pinyon Script', 'Cormorant Garamond Variable', ui-serif, Georgia, serif;
 
 	--color-ivory: #ebded5;
 	--color-champagne: #ddc9b4;

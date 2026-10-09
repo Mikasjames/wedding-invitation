@@ -17,6 +17,9 @@ importers:
       '@fontsource/cormorant-sc':
         specifier: ^5.3.0
         version: 5.3.0
+      '@fontsource/pinyon-script':
+        specifier: ^5.3.0
+        version: 5.3.0
       canvas-confetti:
         specifier: ^1.9.4
         version: 1.9.4
@@ -77,6 +80,9 @@ packages:
 
   '@fontsource/cormorant-sc@5.3.0':
     resolution: {integrity: sha512-4iTWFRwm6x6UJ2tJpcMYShL2KLgLSwiXt5KTPSe6GHpDr54ZzkH3/JXXvczGWV3MnzTUc4PCqPsbh/VLNPlxGg==}
+
+  '@fontsource/pinyon-script@5.3.0':
+    resolution: {integrity: sha512-ilhy4l5apzyDkfuKb7PZBUT5Sf6nfxucdXT5TQ0wQDyWtDPlouLy1lQq3lMEPk1lPsHHVrd11EkPnEG8FqDgUA==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -921,6 +927,8 @@ snapshots:
   '@fontsource-variable/montserrat@5.3.0': {}
 
   '@fontsource/cormorant-sc@5.3.0': {}
+
+  '@fontsource/pinyon-script@5.3.0': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
