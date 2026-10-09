@@ -4,10 +4,14 @@
 @import '@fontsource-variable/cormorant-garamond/wght-italic.css';
 @import '@fontsource-variable/montserrat/wght.css';
 
-@import '@fontsource/cormorant-sc/300.css';
-@import '@fontsource/cormorant-sc/400.css';
-
-@import '@fontsource/pinyon-script/400.css';
+/*
+ * Faces the invitation itself sets copy in. Specimen-only faces live in
+ * `src/lib/fonts.css`, which only the /fonts/ route pulls in.
+ *
+ * Latin subset: the names are plain ASCII, so the Cyrillic and Vietnamese
+ * files this would otherwise emit are never fetched.
+ */
+@import '@fontsource/pinyon-script/latin-400.css';
 
 @theme {
 	--font-display: 'Cormorant Garamond Variable', ui-serif, Georgia, serif;

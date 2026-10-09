@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { scriptFonts, systemFonts } from '../src/lib/lib/fonts';
 
 test.describe('opening types', () => {
 	test('root shows the envelope reveal', async ({ page }) => {
@@ -64,6 +65,44 @@ test.describe('opening types', () => {
 		// or the curtain would be skipped entirely.
 		await expect(page.locator('[data-curtain]')).toBeVisible();
 		await expect(page.locator('[data-curtain]')).not.toHaveClass(/invisible/);
+	});
+});
+
+test.describe('type specimen', () => {
+	test('renders every family in the manifest', async ({ page }) => {
+		await page.goto('/fonts/');
+
+		await expect(page.getByRole('heading', { name: 'Typefaces', level: 1 })).toBeVisible();
+		await expect(page.locator('[data-font]')).toHaveCount(
+			systemFonts.length + scriptFonts.length
+		);
+	});
+
+	test('the hero names face is the one marked in use', async ({ page }) => {
+		await page.goto('/fonts/');
+
+		const names = page.locator('[data-font="Pinyon Script"]');
+		await expect(names).toBeVisible();
+		await expect(names.getByText('in use')).toBeVisible();
+		await expect(names.getByText('Michal')).toBeVisible();
+	});
+
+	// A missing @font-face is silent: the specimen just falls back to the serif
+	// stack. Ask the browser which faces it actually loaded. Note that
+	// `document.fonts.check()` is useless here — it reports true for families
+	// that do not exist at all.
+	test('every specimen really loads its face', async ({ page }) => {
+		await page.goto('/fonts/');
+		await page.evaluate(() => document.fonts.ready);
+
+		const missing = await page.evaluate((families) => {
+			const loaded = new Set(
+				[...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family)
+			);
+			return families.filter((family) => !loaded.has(family));
+		}, [...systemFonts, ...scriptFonts].map((f) => f.family));
+
+		expect(missing).toEqual([]);
 	});
 });
 
