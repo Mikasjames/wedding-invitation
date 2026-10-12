@@ -50,20 +50,16 @@
 			Save the date
 		</p>
 
-		<h1
-			class="mt-6 font-names text-[clamp(3.5rem,16vw,5.25rem)] leading-[1.08] font-normal
-			       tracking-[-0.005em] text-ink"
-		>
-			<span class="block">{wedding.names.split(' & ')[0]}</span>
-			<span
-				class="my-5 block font-names font-normal text-gold"
-				style="font-size: clamp(2.25rem, 9vw, 3rem)"
-				aria-hidden="true"
-			>
-				&amp;
-			</span>
-			<span class="block">{wedding.names.split(' & ')[1]}</span>
-		</h1>
+		<h1 class="sr-only">{wedding.names}</h1>
+		<img
+			src="/names.svg"
+			alt=""
+			aria-hidden="true"
+			width={1372}
+			height={1387}
+			decoding="async"
+			class="mt-6 block h-auto w-[min(84vw,25rem)] max-w-full select-none"
+		/>
 
 		<Ornament class="my-8" />
 
