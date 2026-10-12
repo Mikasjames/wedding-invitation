@@ -39,8 +39,25 @@
 
 	const timings = $derived(
 		reduced
-			? { flapDelay: 0, flap: 0, letter: 0, hold: 0, fade: 240, content: 0 }
-			: { flapDelay: 430, flap: 820, letter: 900, hold: 450, fade: 520, content: 2900 }
+			? { flapDelay: 0, flap: 0, letter: 0, hold: 0, fade: 240, content: 0, contentFade: 240 }
+			: { flapDelay: 430, flap: 820, letter: 900, hold: 450, fade: 520, content: 2900, contentFade: 1200 }
+	);
+
+	/** Must match the transition duration in Sprig.svelte. */
+	const SPRIG_FADE = 900;
+
+	/**
+	 * How far ahead of that landing the plants unfurl. Pinning their end to the end
+	 * of the invitation fade left them trailing it, only starting once the text was
+	 * already mostly surfaced.
+	 */
+	const SPRIG_LEAD = 250;
+
+	// The plants live inside the content wrapper, so their entrance has to land
+	// with the invitation's fade. At the curtain's 1150ms they finished at 2050ms,
+	// entirely behind the closed envelope, and simply popped in already grown.
+	const sprigDelay = $derived(
+		Math.max(0, timings.content + timings.contentFade - SPRIG_FADE - SPRIG_LEAD)
 	);
 
 	onMount(() => {
@@ -95,12 +112,14 @@
 	<div
 		data-reveal
 		inert={!reveal.opened}
-		class="transition-[opacity,transform] duration-[1200ms] ease-luxury
+		class="transition-[opacity,transform] ease-luxury
 		       motion-reduce:transition-none
 		       {reveal.opened
 			? 'opacity-100'
 			: 'pointer-events-none scale-[0.985] opacity-0'}"
-		style="transition-delay: {timings.content}ms"
+		style="transition-duration: {timings.contentFade}ms;
+		       transition-delay: {timings.content}ms;
+		       --sprig-delay: {sprigDelay}ms"
 	>
 		{@render children?.()}
 	</div>

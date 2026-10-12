@@ -28,8 +28,8 @@
 		opacity: 0;
 		transform: scale(0.94);
 		transition:
-			opacity 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)) 1150ms,
-			transform 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)) 1150ms;
+			opacity 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)) var(--sprig-delay, 1150ms),
+			transform 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)) var(--sprig-delay, 1150ms);
 	}
 
 	img[data-sprig='bottom-left'] {
@@ -38,7 +38,7 @@
 
 	img[data-sprig='top-right'] {
 		transform-origin: 100% 0%;
-		transition-delay: 1290ms;
+		transition-delay: calc(var(--sprig-delay, 1150ms) + 140ms);
 	}
 
 	:global(.is-revealed) img[data-sprig] {

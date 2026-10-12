@@ -42,6 +42,32 @@ test.describe('opening types', () => {
 		}
 	});
 
+	// The plants sit inside the content wrapper, so their entrance only reads as
+	// an unfurl if it starts after the invitation begins surfacing. Asserting the
+	// ordering structurally survives retuning the timings; watching for a mid
+	// fade opacity would be a race.
+	test('the plants unfurl with the invitation on every opening type', async ({ page }) => {
+		for (const route of ['/', '/envelope/', '/curtain/']) {
+			await page.goto(route);
+
+			const { contentDelay, sprigDelay } = await page.evaluate(() => {
+				const toMs = (value: string) =>
+					parseFloat(value) * (value.includes('ms') ? 1 : 1000);
+
+				const content = document.querySelector('[data-reveal]');
+				const sprig = document.querySelector('[data-sprig]');
+
+				return {
+					contentDelay: content ? toMs(getComputedStyle(content).transitionDelay) : 0,
+					sprigDelay: sprig ? toMs(getComputedStyle(sprig).transitionDelay) : 0
+				};
+			});
+
+			expect(contentDelay, `content delay on ${route}`).toBeGreaterThan(0);
+			expect(sprigDelay, `sprig delay on ${route}`).toBeGreaterThan(contentDelay);
+		}
+	});
+
 	test('client-side navigation replays the reveal', async ({ page }) => {
 		await page.goto('/envelope/');
 		await page.getByRole('button', { name: 'Open the invitation' }).click();
