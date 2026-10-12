@@ -19,20 +19,20 @@
 	loading="lazy"
 	decoding="async"
 	data-sprig={from ?? undefined}
-	class="pointer-events-none h-auto select-none {className}"
+	class="pointer-events-none w-full h-auto select-none {className}"
 />
 
 <!--
-	Callers must set a width. There is deliberately no default here: a `w-full`
-	of its own used to sit in this attribute, and since both it and a caller's
-	`w-*` are width utilities in the same Tailwind layer, whichever came later in
-	the stylesheet won — not the order the two classes appear in the attribute.
-	A caller asking for `w-[46%]` got the full container anyway and never knew
-	why. Leaving the width to the caller makes the number they wrote the number
-	they get.
+	The image fills its container, so callers cap it with `max-w-*`, not `w-*`:
+	a `w-*` utility of their own cannot beat the `w-full` above, because both
+	live in the same Tailwind layer and the later rule in the stylesheet wins —
+	not the order the two classes appear in the attribute. `max-w-*` is a
+	different property, so a cap always applies no matter which order the two
+	rules are emitted in. A caller reaching for `w-*` here gets a plant that
+	silently spans the whole container and lays itself across the text.
 
 	Opacity is the other half of this. The revealed rule below is specific
-	enough to beat a plain `opacity-*` utility, so callers pass
+	enough to outrank a plain `opacity-*` utility, so callers pass
 	`--sprig-opacity` instead.
 -->
 <style>
