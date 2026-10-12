@@ -50,8 +50,6 @@ export const wedding = {
 
 	dateShort,
 
-	timeLabel: 'Four in the afternoon, until the small hours',
-
 	city: 'Tanza, Cavite',
 
 	ceremony: {
@@ -65,8 +63,6 @@ export const wedding = {
 		venue: 'Rio Delta',
 		address: 'Tanza, Cavite, Philippines'
 	},
-
-	rsvpBy: '1 April 2027',
 
 	story: 'Placeholder story — how you met, the proposal, why Tanza. Replace this paragraph later.',
 
