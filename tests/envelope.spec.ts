@@ -18,6 +18,45 @@ async function envelopeBox(page: import('@playwright/test').Page) {
 	return box;
 }
 
+/**
+ * When the invitation finished surfacing, and when scroll was handed back.
+ *
+ * The unlock is read from the inline `overflow` the reveal sets on `body`, not
+ * from `scrollHeight > clientHeight`: that comparison is already true while
+ * scroll is locked, because a hidden overflow still reports its content height.
+ */
+async function revealTimings(page: import('@playwright/test').Page) {
+	return await page.evaluate(async () => {
+		const content = document.querySelector<HTMLElement>('[data-reveal]')!;
+		const t0 = performance.now();
+		const timeout = 8000;
+
+		return await new Promise<{ settledAt: number; unlockedAt: number }>((resolve) => {
+			let settledAt = Infinity;
+			let unlockedAt = Infinity;
+
+			const tick = () => {
+				const now = performance.now() - t0;
+
+				if (settledAt === Infinity && Number(getComputedStyle(content).opacity) === 1) {
+					settledAt = Math.round(now);
+				}
+				if (unlockedAt === Infinity && document.body.style.overflow !== 'hidden') {
+					unlockedAt = Math.round(now);
+				}
+
+				if ((settledAt !== Infinity && unlockedAt !== Infinity) || now > timeout) {
+					resolve({ settledAt, unlockedAt });
+				} else {
+					setTimeout(tick, 50);
+				}
+			};
+
+			tick();
+		});
+	});
+}
+
 for (const size of SIZES) {
 	test(`the envelope is ${size.landscape ? 'landscape' : 'portrait'} on ${size.label}`, async ({
 		page
@@ -60,6 +99,61 @@ test('the seal keeps its weight on a landscape envelope', async ({ page }) => {
 	// out to 18.7% here. Assert the range rather than the tuned value.
 	expect(seal / envelope).toBeGreaterThan(0.16);
 	expect(seal / envelope).toBeLessThan(0.22);
+});
+
+// The envelope is dismissed well before the invitation finishes fading in.
+// Handing the scrollbar back on dismissal showed its thumb over a half-faded
+// page and let a stray scroll move content that had not landed yet. Assert the
+// ordering rather than a timing, so retuning `timings` stays a layout change.
+test('the scrollbar waits for the invitation to finish surfacing', async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto('/envelope/');
+
+	await page.getByRole('button', { name: 'Open the invitation' }).click();
+
+	const { settledAt, unlockedAt } = await revealTimings(page);
+
+	expect(settledAt, 'content settled').toBeLessThan(8000);
+	expect(unlockedAt, 'scrollbar appeared').toBeLessThan(8000);
+	expect(unlockedAt, 'scrollbar appeared').toBeGreaterThanOrEqual(settledAt);
+});
+
+// A stray scroll during the fade used to move content that had not landed.
+// The page must stay pinned until the unlock fires.
+test('the page cannot scroll while the invitation is still surfacing', async ({
+	page
+}) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto('/envelope/');
+
+	await page.getByRole('button', { name: 'Open the invitation' }).click();
+
+	// Mid-fade: the invitation is visible but the fade is still running.
+	await expect
+		.poll(() => page.evaluate(() => Number(getComputedStyle(document.querySelector('[data-reveal]')!).opacity)), {
+			timeout: 8000
+		})
+		.toBeGreaterThan(0.05);
+
+	await page.mouse.wheel(0, 600);
+	await page.waitForTimeout(100);
+
+	expect(await page.evaluate(() => window.scrollY)).toBe(0);
+});
+
+// The curtain reveal has its own deadline and was already unlocking after its
+// content settled. Guard that it did not drift into the envelope's bug.
+test('the curtain hands back the scrollbar after its content too', async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto('/curtain/');
+
+	await page.getByRole('button', { name: 'Open the invitation' }).click();
+
+	const { settledAt, unlockedAt } = await revealTimings(page);
+
+	expect(settledAt, 'curtain content settled').toBeLessThan(8000);
+	expect(unlockedAt, 'curtain scrollbar appeared').toBeLessThan(8000);
+	expect(unlockedAt, 'curtain scrollbar appeared').toBeGreaterThanOrEqual(settledAt);
 });
 
 // The seal sits on the apex, which is a fixed fraction of the envelope's

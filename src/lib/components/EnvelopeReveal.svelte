@@ -33,6 +33,20 @@
 	let guard = false;
 	let timers: ReturnType<typeof setTimeout>[] = [];
 
+	/** When the envelope finishes leaving. Lifted out of `handleOpen` so the
+	 *  scroll unlock can be derived against it. */
+	let goneAt = $state(0);
+
+	/**
+	 * Scroll is handed back separately from the envelope being dismissed. Those
+	 * are different deadlines: the envelope is gone at ~3200ms, but the invitation
+	 * is still fading in until ~4100ms, so unlocking on `dismissed` showed the
+	 * scrollbar thumb over a half-faded page and let a stray scroll move content
+	 * that had not landed yet. Initialised from `reveal.opened` so a route entered
+	 * mid-reveal is already scrollable, matching how `phase` starts at `gone`.
+	 */
+	let scrolling = $state(reveal.opened);
+
 	const breaking = $derived(phase !== 'closed');
 	const dismissed = $derived(phase === 'gone');
 	const leaving = $derived(phase === 'leaving' || phase === 'gone');
@@ -60,6 +74,23 @@
 		Math.max(0, timings.content + timings.contentFade - SPRIG_FADE - SPRIG_LEAD)
 	);
 
+	/**
+	 * Wait out the invitation's fade before handing back the scrollbar. `goneAt`
+	 * stays a floor, so should the envelope ever outlast the content, the unlock
+	 * still does not arrive early.
+	 *
+	 * The tail matters: `content + contentFade` is the transition's *nominal* end,
+	 * but the transition does not begin when the seal is clicked. Svelte flushes
+	 * the class change a frame or two later, and `sealBurst` runs first, so
+	 * scheduling on the nominal end put the unlock fractionally ahead of the fade
+	 * it was meant to wait for.
+	 */
+	const SCROLL_TAIL = 120;
+
+	const scrollUnlockAt = $derived(
+		Math.max(goneAt, timings.content + timings.contentFade + SCROLL_TAIL)
+	);
+
 	onMount(() => {
 		reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -82,7 +113,9 @@
 
 		if (reduced) {
 			phase = 'leaving';
-			timers.push(setTimeout(() => (phase = 'gone'), timings.fade + 40));
+			goneAt = timings.fade + 40;
+			timers.push(setTimeout(() => (phase = 'gone'), goneAt));
+			timers.push(setTimeout(() => (scrolling = true), scrollUnlockAt));
 			return;
 		}
 
@@ -90,17 +123,18 @@
 		const flapAt = timings.flapDelay;
 		const letterAt = flapAt + timings.flap;
 		const leavingAt = letterAt + timings.letter + timings.hold;
-		const goneAt = leavingAt + timings.fade + 80;
+		goneAt = leavingAt + timings.fade + 80;
 
 		timers.push(setTimeout(() => (phase = 'flap'), flapAt));
 		timers.push(setTimeout(() => (phase = 'letter'), letterAt));
 		timers.push(setTimeout(() => (phase = 'leaving'), leavingAt));
 		timers.push(setTimeout(() => (phase = 'gone'), goneAt));
+		timers.push(setTimeout(() => (scrolling = true), scrollUnlockAt));
 	}
 
 	$effect(() => {
 		if (!browser) return;
-		const locked = !dismissed;
+		const locked = !scrolling;
 		document.body.style.overflow = locked ? 'hidden' : '';
 		return () => {
 			document.body.style.overflow = '';
