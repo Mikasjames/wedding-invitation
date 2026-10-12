@@ -1,20 +1,30 @@
 <script lang="ts">
 	import Ornament from '$lib/components/Ornament.svelte';
 	import Sprig from '$lib/components/Sprig.svelte';
+	import { countdown, countdownSentence, hasStarted } from '$lib/lib/countdown';
 	import { wedding } from '$lib/lib/wedding';
 	import { reveal } from '$lib/state/reveal.svelte';
 	import { onMount } from 'svelte';
 
-	let now = $state(Date.now());
+	// The page is prerendered, so a `Date.now()` read during render would bake
+	// the gap into the static HTML and freeze it there for every guest who
+	// never runs the client bundle. Read the clock on mount instead and show
+	// the digits only once they mean something.
+	let now = $state(0);
+
 	onMount(() => {
-		const id = setInterval(() => (now = Date.now()), 60_000);
+		now = Date.now();
+
+		const id = setInterval(() => {
+			now = Date.now();
+			if (hasStarted(wedding.start, new Date(now))) clearInterval(id);
+		}, 60_000);
+
 		return () => clearInterval(id);
 	});
 
-	const diff = $derived(Math.max(0, wedding.start.getTime() - now));
-	const days = $derived(Math.floor(diff / 86_400_000));
-	const hours = $derived(Math.floor((diff % 86_400_000) / 3_600_000));
-	const minutes = $derived(Math.floor((diff % 3_600_000) / 60_000));
+	const started = $derived(now > 0 && hasStarted(wedding.start, new Date(now)));
+	const units = $derived(countdown(wedding.start, new Date(now)));
 </script>
 
 <section class="relative grid min-h-[100svh] place-items-center overflow-hidden px-6 py-24">
@@ -35,13 +45,13 @@
 			src="/plants/plant_2.svg"
 			ratio={659 / 641}
 			from="top-right"
-			class="absolute -top-[10%] -right-[11%] w-[60%] [--sprig-opacity:0.55] sm:-top-[9%] sm:-right-[10%] sm:w-[52%] sm:[--sprig-opacity:1] lg:-right-[8%] lg:w-[46%]"
+			class="absolute -top-[10%] -right-[11%] max-w-[60%] [--sprig-opacity:0.55] sm:-top-[9%] sm:-right-[10%] sm:max-w-[52%] sm:[--sprig-opacity:1] lg:-right-[8%] lg:max-w-[46%]"
 		/>
 		<Sprig
 			src="/plants/plant_1.svg"
 			ratio={640 / 725}
 			from="bottom-left"
-			class="absolute -bottom-[7%] -left-[9%] w-[50%] [--sprig-opacity:0.55] sm:-bottom-[7%] sm:-left-[8%] sm:w-[42%] sm:[--sprig-opacity:1] lg:w-[36%]"
+			class="absolute -bottom-[7%] -left-[9%] max-w-[46%] [--sprig-opacity:0.55] sm:-bottom-[7%] sm:-left-[8%] sm:max-w-[40%] sm:[--sprig-opacity:1] lg:max-w-[36%]"
 		/>
 	</div>
 
@@ -63,15 +73,64 @@
 
 		<Ornament class="my-8" />
 
-		<p class="font-display text-xl tracking-[0.06em] text-forest-800 sm:text-2xl">
+		<p class="font-display text-xl tracking-[0.06em] text-bronze sm:text-2xl">
 			{wedding.dateLabel}
 		</p>
-		<p class="mt-3 font-body text-[11px] font-medium tracking-[0.28em] text-ink/50 uppercase">
+		<p class="mt-3 font-body text-[11px] font-medium tracking-[0.28em] text-bronze uppercase">
 			{wedding.city}
 		</p>
+		{#if now > 0}
+			{#if started}
+				<p class="mt-10 font-display text-lg text-ink sm:text-xl">
+					We did it — thank you for celebrating with us.
+				</p>
+			{:else}
+				<!--
+					Both countdowns carry `role="timer"`. Exactly one is in the
+					accessibility tree at any width — the other is `display: none` —
+					so a test or a screen reader never has to pick a breakpoint.
+				-->
+				<p
+					class="mt-8 hidden font-body text-[11px] font-medium tracking-[0.28em] text-gold-deep uppercase lg:block"
+					role="timer"
+				>
+					{#each units as unit, i (unit.label)}
+						<span class="mx-2">{unit.value} {unit.label}</span>
+						{#if i < units.length - 1}
+							<span aria-hidden="true">·</span>
+						{/if}
+					{/each}
+				</p>
 
-		<p class="mt-8 font-body text-[11px] font-medium tracking-[0.28em] text-gold-deep uppercase">
-			{days} days · {hours} hours · {minutes} minutes
-		</p>
+				<div class="mt-10 flex items-center lg:hidden" role="timer">
+					<span class="sr-only">{countdownSentence(units)} until we say I do.</span>
+
+					{#each units as unit, i (unit.label)}
+						<div class="flex w-[4.5rem] flex-col items-center" aria-hidden="true">
+							<!--
+								Lining figures, not the old-style ones the face defaults to.
+								Those render 1 as a capital I, so a countdown of "119 days"
+								reads as "II9 days" — a number nobody can trust at a glance.
+							-->
+							<span
+								class="font-display text-3xl leading-none text-ink lining-nums tabular-nums sm:text-4xl"
+							>
+								{unit.value}
+							</span>
+							<span class="mt-2.5 font-body text-[9px] font-medium tracking-[0.28em] text-bronze uppercase">
+								{unit.label}
+							</span>
+						</div>
+
+						{#if i < units.length - 1}
+							<span
+								class="h-8 w-px shrink-0 bg-gradient-to-b from-transparent via-gold/35 to-transparent sm:h-10"
+								aria-hidden="true"
+							></span>
+						{/if}
+					{/each}
+				</div>
+			{/if}
+		{/if}
 	</div>
 </section>
