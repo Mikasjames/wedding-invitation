@@ -1,6 +1,40 @@
-/** Tanza, Cavite. UTC+8 all year — the Philippines has no DST, so a fixed offset
-  *  is exact. */
+/** Tanza, Cavite. UTC+8 all year — the Philippines has no DST, so a fixed
+ *  offset is exact. Written out rather than left as a bare local-time string,
+ *  which resolves to a different instant on every guest's machine. */
+const TIME_ZONE = 'Asia/Manila';
+
 const start = new Date('2027-02-09T16:00:00+08:00');
+
+/** Always in Philippine time, whatever the guest's own zone. The ceremony
+ *  happens there, not where they happen to be reading. */
+function inManila(date: Date, options: Intl.DateTimeFormatOptions): string {
+	return new Intl.DateTimeFormat('en-GB', { ...options, timeZone: TIME_ZONE }).format(date);
+}
+
+/** `en-GB` is pinned so the order stays "9 February" rather than "February 9"
+ *  on a guest whose locale would otherwise reorder it. */
+const dateLabel = inManila(start, {
+	weekday: 'long',
+	day: 'numeric',
+	month: 'long',
+	year: 'numeric'
+});
+
+/** Intl has no option for "02 · 09 · 2027", so assemble it from the parts. */
+const shortParts = new Intl.DateTimeFormat('en-GB', {
+	day: '2-digit',
+	month: '2-digit',
+	year: 'numeric',
+	timeZone: TIME_ZONE
+}).formatToParts(start);
+
+function part(type: Intl.DateTimeFormatPartTypes): string {
+	const found = shortParts.find((p) => p.type === type);
+	if (!found) throw new Error(`missing ${type} in formatted date`);
+	return found.value;
+}
+
+const dateShort = `${part('month')} · ${part('day')} · ${part('year')}`;
 
 export const wedding = {
 	names: 'Michal & Lemuel',
@@ -12,9 +46,9 @@ export const wedding = {
 
 	start,
 
-	dateLabel: 'Tuesday, 9 February 2027',
+	dateLabel,
 
-	dateShort: '02 · 09 · 2027',
+	dateShort,
 
 	timeLabel: 'Four in the afternoon, until the small hours',
 

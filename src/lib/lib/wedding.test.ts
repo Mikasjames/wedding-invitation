@@ -17,9 +17,38 @@ describe('wedding', () => {
 		);
 	});
 
-	it('has matching date labels', () => {
-		expect(wedding.dateLabel).toContain('2027');
-		expect(wedding.dateShort).toMatch(/\d{2} · \d{2} · 2027/);
+	// Both labels are derived from `start`, so pinning them here is what keeps
+	// the two from drifting apart — the failure mode that let the offset above
+	// go unnoticed for so long.
+	it('derives its date labels from the start instant', () => {
+		expect(wedding.dateLabel).toBe('Tuesday, 9 February 2027');
+		expect(wedding.dateShort).toBe('02 · 09 · 2027');
+	});
+
+	// Pinned to Asia/Manila, so a guest on the far side of the date line still
+	// reads the date the ceremony is actually on. Re-derive across a spread of
+	// host zones and require the rendered label not to move.
+	it('renders its labels in Philippine time regardless of the host zone', () => {
+		const original = process.env.TZ;
+
+		try {
+			for (const hostZone of ['Pacific/Kiritimati', 'UTC', 'Pacific/Niue', 'America/Chicago']) {
+				process.env.TZ = hostZone;
+
+				const rendered = new Intl.DateTimeFormat('en-GB', {
+					weekday: 'long',
+					day: 'numeric',
+					month: 'long',
+					year: 'numeric',
+					timeZone: 'Asia/Manila'
+				}).format(wedding.start);
+
+				expect(rendered, `label under ${hostZone}`).toBe(wedding.dateLabel);
+			}
+		} finally {
+			if (original === undefined) delete process.env.TZ;
+			else process.env.TZ = original;
+		}
 	});
 
 	it('has non-empty names and monogram', () => {
