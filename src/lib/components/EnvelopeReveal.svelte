@@ -139,7 +139,7 @@
 			<div class="paper absolute inset-0" aria-hidden="true"></div>
 
 			<div class="folds absolute inset-0">
-				<div class="envelope" data-phase={phase}>
+				<div class="envelope" data-card data-phase={phase}>
 					<div class="env-back" aria-hidden="true"></div>
 
 					<div class="letter" aria-hidden="true">
@@ -210,10 +210,32 @@
 		--paper: #17446d;
 		--apex: 47%;
 		--radius: 10px;
+
+		/* The envelope's proportions, and the single knob that changes them. */
+		--shape: 0.72;
+		--env-h: 640px;
+		--perspective: 1400px;
+
 		--column: min(86vw, 60svh, 460px);
 		transition:
 			opacity 520ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)),
 			transform 520ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1));
+	}
+
+	/*
+	 * On a desktop the envelope turns on its side. A 3:2 card reads as a real
+	 * landscape envelope, and a width-driven column leaves it marooned in the
+	 * middle of a wide screen, so size it from height instead. 70vw guards a
+	 * short-but-wide window, where height stops being the binding constraint.
+	 */
+	@media (min-width: 1280px) {
+		.scene {
+			--shape: 1.5;
+			--env-h: min(58svh, 640px);
+			--column: min(calc(var(--env-h) * var(--shape)), 1000px, 70vw);
+			--perspective: calc(var(--column) * 3);
+			--radius: 14px;
+		}
 	}
 
 	.scene.is-leaving {
@@ -246,7 +268,7 @@
 	.envelope {
 		position: relative;
 		width: var(--column);
-		aspect-ratio: 0.72;
+		aspect-ratio: var(--shape);
 		border-radius: var(--radius);
 	}
 
@@ -270,6 +292,8 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+		/* Percentage padding resolves against width, which the portrait envelope
+		   has little of and the landscape one has in abundance. See below. */
 		padding: 9% 6% 6%;
 		text-align: center;
 		background: linear-gradient(to bottom, #f6f1e9, #f2ebe3 55%);
@@ -326,7 +350,9 @@
 		position: absolute;
 		inset: 0;
 		z-index: 3;
-		perspective: 1400px;
+		/* Scales with the envelope at the desktop breakpoint; a fixed distance
+		   over a much wider flap foreshortens hard at the edges. */
+		perspective: var(--perspective);
 		pointer-events: none;
 	}
 
@@ -427,6 +453,11 @@
 		top: var(--apex);
 		translate: -50% -50%;
 		z-index: 5;
+
+		/* 24% of the portrait envelope's width. The landscape envelope is far
+		   wider, so this would clamp to its cap and the seal would shrink from
+		   a quarter of the envelope to a sixth of it. Key it to height there
+		   instead, which is what sizes the envelope at that breakpoint. */
 		width: clamp(88px, 24%, 128px);
 		aspect-ratio: 432 / 446;
 		border-radius: 9999px;
@@ -469,6 +500,28 @@
 	.seal:disabled {
 		transform: translateY(-30px) rotate(-7deg) scale(1.14);
 		opacity: 0;
+	}
+
+	/*
+	 * The rest of the landscape sizing. These have to come after the rules above
+	 * rather than sit beside the `.scene` override: they target the same
+	 * specificity, so source order decides, and Svelte scopes styles without
+	 * reordering them.
+	 */
+	@media (min-width: 1280px) {
+		/* 0.28 of the envelope's height holds a constant 18.7% of its width
+		   (0.28 / 1.5), so the seal keeps its weight on the apex at any size
+		   instead of clamping to its portrait cap. */
+		.seal {
+			width: min(calc(var(--env-h) * 0.28), 176px);
+		}
+
+		/* Sized off height so the letter and its padding scale together. The
+		   percentage above resolves against a width that has grown by 70%,
+		   which would eat the height the now-shorter box no longer has. */
+		.letter {
+			padding: 5svh 7svh;
+		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
