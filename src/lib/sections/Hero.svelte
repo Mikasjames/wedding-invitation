@@ -35,13 +35,13 @@
 			src="/plants/plant_2.svg"
 			ratio={659 / 641}
 			from="top-right"
-			class="absolute -top-[10%] -right-[11%] w-[46%] opacity-[0.55] sm:-top-[9%] sm:-right-[10%] sm:w-[48%] lg:-right-[8%] lg:w-[46%]"
+			class="absolute -top-[10%] -right-[11%] w-[60%] [--sprig-opacity:0.55] sm:-top-[9%] sm:-right-[10%] sm:w-[52%] sm:[--sprig-opacity:1] lg:-right-[8%] lg:w-[46%]"
 		/>
 		<Sprig
 			src="/plants/plant_1.svg"
 			ratio={640 / 725}
 			from="bottom-left"
-			class="absolute -bottom-[7%] -left-[9%] w-[36%] opacity-[0.55] sm:-bottom-[7%] sm:-left-[8%] sm:w-[36%] lg:w-[36%]"
+			class="absolute -bottom-[7%] -left-[9%] w-[50%] [--sprig-opacity:0.55] sm:-bottom-[7%] sm:-left-[8%] sm:w-[42%] sm:[--sprig-opacity:1] lg:w-[36%]"
 		/>
 	</div>
 

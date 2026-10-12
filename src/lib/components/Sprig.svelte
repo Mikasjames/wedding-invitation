@@ -19,11 +19,23 @@
 	loading="lazy"
 	decoding="async"
 	data-sprig={from ?? undefined}
-	class="pointer-events-none h-auto w-full select-none {className}"
+	class="pointer-events-none h-auto select-none {className}"
 />
 
-<style>
+<!--
+	Callers must set a width. There is deliberately no default here: a `w-full`
+	of its own used to sit in this attribute, and since both it and a caller's
+	`w-*` are width utilities in the same Tailwind layer, whichever came later in
+	the stylesheet won — not the order the two classes appear in the attribute.
+	A caller asking for `w-[46%]` got the full container anyway and never knew
+	why. Leaving the width to the caller makes the number they wrote the number
+	they get.
 
+	Opacity is the other half of this. The revealed rule below is specific
+	enough to beat a plain `opacity-*` utility, so callers pass
+	`--sprig-opacity` instead.
+-->
+<style>
 	img[data-sprig] {
 		opacity: 0;
 		transform: scale(0.94);
@@ -42,14 +54,14 @@
 	}
 
 	:global(.is-revealed) img[data-sprig] {
-		opacity: 1;
+		opacity: var(--sprig-opacity, 1);
 		transform: scale(1);
 	}
 
 	@media (prefers-reduced-motion: reduce) {
 		img[data-sprig],
 		:global(.is-revealed) img[data-sprig] {
-			opacity: 1;
+			opacity: var(--sprig-opacity, 1);
 			transform: none;
 			transition: none;
 		}
