@@ -40,7 +40,10 @@ Adding a face is three steps:
 2. import it in `src/lib/fonts.css` (use the `latin-400.css` subset unless you need Cyrillic or Greek), or in `src/app.css` if the invitation will actually set copy in it
 3. add an entry to `src/lib/lib/fonts.ts`
 
-`src/lib/lib/fonts.test.ts` fails if a manifest entry has no matching import — otherwise it is a silent failure, and the specimen just falls back to the serif stack.
+Two guards catch a face that is listed but never actually bundled, which otherwise fails silently and leaves the specimen on the serif stack:
+
+- `src/lib/lib/fonts.test.ts` checks statically that every family in the manifest has a matching `@import` in either CSS file. Fast, but it infers the npm package name from the family name, so it can be fooled.
+- `tests/routes.spec.ts` asks the browser which faces actually loaded. This is the authoritative one. Note that `document.fonts.check()` is useless for this — it reports true for families that do not exist at all.
 
 ## Editing the invitation
 
