@@ -58,7 +58,7 @@
 			width={1372}
 			height={1387}
 			decoding="async"
-			class="mt-6 block h-auto w-[min(84vw,25rem)] max-w-full select-none"
+			class="mt-6 block h-auto w-[min(70vw,18rem)] max-w-full select-none"
 		/>
 
 		<Ornament class="my-8" />
