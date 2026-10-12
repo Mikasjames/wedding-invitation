@@ -50,6 +50,10 @@ export const wedding = {
 
 	dateShort,
 
+	/** Event times are prose rather than formatted values, so the zone is
+	 *  marked here for the sections that print them. */
+	timeZoneLabel: 'PHT',
+
 	city: 'Tanza, Cavite',
 
 	ceremony: {

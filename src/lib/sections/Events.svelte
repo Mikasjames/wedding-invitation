@@ -14,7 +14,7 @@
 				<div>
 					<h3 class="font-display text-2xl text-ink">{event.name}</h3>
 					<p class="mt-1 font-body text-[11px] font-medium tracking-[0.28em] text-gold-deep uppercase">
-						{event.time} · {event.venue}
+						{event.time} {wedding.timeZoneLabel} · {event.venue}
 					</p>
 					<p class="mt-3 font-display text-lg text-ink/70">{event.description}</p>
 				</div>
