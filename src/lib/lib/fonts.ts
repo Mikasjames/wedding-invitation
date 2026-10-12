@@ -1,9 +1,10 @@
 /*
  * The faces the invitation can use, in one place.
  *
- * Every `family` here must be backed by an `@import` in `src/lib/fonts.css`,
- * which the /fonts/ gallery pulls in. Adding a face is three steps: install the
- * @fontsource package, add the import, add an entry below.
+ * Every `family` here must be backed by an `@import` in either `src/app.css`
+ * (faces the invitation sets copy in) or `src/lib/fonts.css` (gallery-only
+ * faces). Adding a face is three steps: install the @fontsource package, add
+ * the import, add an entry below.
  */
 export interface FontEntry {
 	/** Must match the `font-family` in the family's @font-face. */
@@ -90,5 +91,25 @@ export const scriptFonts: FontEntry[] = [
 		family: 'Parisienne',
 		label: 'Parisienne',
 		note: 'Brushy. Closer to signage than to calligraphy.'
+	},
+	{
+		family: 'Satisfy',
+		label: 'Satisfy',
+		note: 'Closest of the set to Le Jour Script. Modern connected strokes, a slight slant, and a grace rather than a flourish.'
+	},
+	{
+		family: 'Herr Von Muellerhoff',
+		label: 'Herr Von Muellerhoff',
+		note: 'Delicate and heavily swashed. The ornate end of the Le Jour Script register.'
+	},
+	{
+		family: 'Mrs Saint Delafield',
+		label: 'Mrs Saint Delafield',
+		note: 'Hairline weight with long entry strokes. Airy and precious, and very light on ivory.'
+	},
+	{
+		family: 'The Nautigal',
+		label: 'The Nautigal',
+		note: 'Formal calligraphic script, higher contrast than Le Jour Script but the most legible of the four.'
 	}
 ];
