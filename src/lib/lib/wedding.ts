@@ -1,4 +1,6 @@
-const start = new Date('2027-02-09T16:00:00+16:00');
+/** Tanza, Cavite. UTC+8 all year — the Philippines has no DST, so a fixed offset
+  *  is exact. */
+const start = new Date('2027-02-09T16:00:00+08:00');
 
 export const wedding = {
 	names: 'Michal & Lemuel',
