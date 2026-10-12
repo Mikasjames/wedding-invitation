@@ -22,6 +22,11 @@ static/seal.svg              115 KB
   -> node artwork/build-lace.mjs       seamless tile, 55 KB
   -> pnpm dlx svgo --config artwork/svgo-trace.config.mjs static/lace.svg
 static/lace.svg              18 KB
+
+artwork/names.svg            VTracer trace of the names, 3371x2269, 17 paths
+  -> node artwork/build-names.mjs       single ink, transparent, cropped to ink
+  -> pnpm dlx svgo --config artwork/svgo-trace.config.mjs static/names.svg
+static/names.svg             6.2 KB
 ```
 
 All steps are idempotent: re-running them from the originals reproduces the
@@ -122,6 +127,12 @@ document that cannot inherit the page's `color` — `currentColor` there renders
 black. Inlining the SVG would work, but it would put ~110 KB of path data into
 the prerendered HTML, on the page we just made fast.
 
+The names are the exception that proves the rule would be wrong to extend
+here. At 6.2 KB inlining costs nothing, so `names.svg` could carry
+`currentColor` and follow the page ink. It is still baked, because the hero
+renders it through the same `<img>` as everything else and there is no second
+code path to keep honest for one asset.
+
 The trade-off: CSS can set size, position and opacity, but not the colour.
 Retinting means editing `INK` in `build-plants.mjs` and re-running.
 
@@ -135,4 +146,26 @@ it on the ones it does not.
 
 For the seal, `INK_LO` / `INK_HI` set the ramp and `LEVELS` the quantisation. For
 the lace, `TILE`, `SPRIG_COUNT` and `BLOSSOM_COUNT` set the density, and `SEED`
-fixes which pattern you get — change it to reshuffle the whole tile.
+fixes which pattern you get — change it to reshuffle the whole tile. For the
+names, `INK` is the single colour and `NEAR_WHITE_MIN` is the cut-off.
+
+## The hero names
+
+`names.svg` is the hero wordmark, traced from the same script the site sets its
+names in. It arrives with the two usual VTracer problems — a near-white
+full-canvas backdrop and pale fills between the strokes — plus a lot of dead
+canvas: the ink occupies 25% of the 3371x2269 source. `build-names.mjs` drops
+the backdrop, re-inks every surviving path to one colour, and crops the viewBox
+to the ink, which is what takes it from 41 KB to 6.2 KB.
+
+**`NEAR_WHITE_MIN` is `0xD0`, not the plants' `0xEF`, and the difference
+matters.** Unlike the plants, this is a flat script trace with no interior
+shading: the ink sits at luminance 73-120 and the highlights jump to 212-232,
+with nothing in between. At `0xEF` the four paths in that 212-232 band survive
+the cut and are re-inked into solid blobs — the exact smudge failure described
+above, and the reason the cut has to sit below the band rather than above it.
+
+**The crop is computed from the bezier control points**, which overshoot the
+curve rather than understate it. The box is at most a unit or two larger than
+the true ink, so it never clips, and it keeps the script independent of any
+hand-measured numbers.
