@@ -17,7 +17,6 @@ const VALID = {
 	status: 'attending',
 	partySize: 3,
 	attendeeNames: ['Juan', 'Maria'],
-	dietaryNotes: 'No shellfish',
 	message: 'Congratulations',
 	respondedAt: timestamp(new Date('2026-12-20T09:30:00Z')),
 	createdAt: timestamp(new Date('2026-10-01T00:00:00Z')),

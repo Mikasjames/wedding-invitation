@@ -28,7 +28,6 @@ export interface AdminRow {
 	partySize: number;
 
 	attendeeNames: string[];
-	dietaryNotes: string;
 	message: string;
 
 	respondedAt: Date | null;
@@ -111,7 +110,6 @@ export function readAdminRow(code: string, data: Record<string, unknown> | undef
 		attendeeNames: Array.isArray(data.attendeeNames)
 			? data.attendeeNames.filter((name): name is string => typeof name === 'string')
 			: [],
-		dietaryNotes: toStr(data.dietaryNotes),
 		message: toStr(data.message),
 		respondedAt: toDate(data.respondedAt),
 		createdAt: toDate(data.createdAt),

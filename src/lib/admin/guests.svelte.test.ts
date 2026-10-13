@@ -167,7 +167,7 @@ describe('GuestList.sync', () => {
 	});
 
 	// Rows belonging to whoever was signed in last are not the next person's to
-	// see, and on a shared laptop they carry dietary notes and messages.
+	// see, and on a shared laptop they carry names and messages.
 	it('drops every row on sign-out', async () => {
 		const { list } = setup();
 		await list.sync('user-1');

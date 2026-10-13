@@ -97,7 +97,7 @@ export class GuestList {
 		} catch (error) {
 			// Clear rather than leave stale rows: this account is not entitled to
 			// them, and on a shared laptop the next person would see another
-			// household's dietary notes and messages.
+			// household's names and messages.
 			this.rows = [];
 
 			if (error instanceof AdminDeniedError) {

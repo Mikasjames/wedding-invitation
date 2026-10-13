@@ -262,18 +262,7 @@
 					</div>
 				</details>
 
-				<label class="flex w-full flex-col gap-2 text-left">
-					<span class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
-						Dietary requirements (optional)
-					</span>
-					<textarea
-						rows="2"
-						bind:value={rsvp.dietaryNotes}
-						placeholder="Allergies, or simply no beef"
-						class="w-full rounded-2xl border border-gold/30 bg-ivory px-5 py-3 font-body text-sm text-ink placeholder:text-ink/40"
-					></textarea>
-				</label>
-			{/if}
+				{/if}
 
 			{#if rsvp.canAttend}
 				<label class="flex w-full flex-col gap-2 text-left">

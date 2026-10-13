@@ -69,15 +69,14 @@ describe('toCsv', () => {
 	});
 });
 
-// The whole reason `cell` quotes unconditionally: a dietary note with a comma in
-// it is not an edge case, it is Tuesday, and a caterer reading a shifted column
-// is worse than an untidy file.
+// The whole reason `cell` quotes unconditionally: a note to the couple carrying a
+// comma is not an edge case, it is Tuesday, and a caterer reading a shifted
+// column is worse than an untidy file.
 describe('CSV round trip', () => {
 	const awkward: AdminRow[] = [
 		row({
 			householdName: 'Santos, Mark & Date',
-			dietaryNotes: 'No shellfish, no beef, no olives',
-			message: 'Congratulations!\nWe would not miss it.\nSee you there.',
+			message: 'Congratulations! We would not miss it.\nSee you there, Maria.',
 			notes: 'Asked about "plus ones" — said no',
 			contactEmail: 'ms@example.com'
 		}),
@@ -90,10 +89,7 @@ describe('CSV round trip', () => {
 
 		expect(parsed).toHaveLength(3);
 		expect(parsed[0].household).toBe('Santos, Mark & Date');
-		expect(parsed[0].dietary).toBe('No shellfish, no beef, no olives');
-		expect(parsed[0].message).toBe(
-			'Congratulations!\nWe would not miss it.\nSee you there.'
-		);
+		expect(parsed[0].message).toBe('Congratulations! We would not miss it.\nSee you there, Maria.');
 		expect(parsed[0].notes).toBe('Asked about "plus ones" — said no');
 		expect(parsed[2].household).toBe('Quo"ted');
 		expect(parsed[2].names).toBe('a"b; c,d');

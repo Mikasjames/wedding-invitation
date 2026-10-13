@@ -8,7 +8,9 @@ import {
 	RsvpClosedError,
 	RsvpNotFoundError,
 	RsvpOfflineError,
-	RsvpRefusedError
+	RsvpRefusedError,
+	NetworkTimeoutError,
+	withTimeout
 } from './backend';
 
 /** The Firestore instance and the SDK namespace it came from, loaded together. */
@@ -47,6 +49,20 @@ async function getRuntime(): Promise<Runtime> {
 
 /** Translates a Firestore error into the one thing the guest is told. */
 function mapError(error: unknown): never {
+	// Already-classified errors pass straight through. `NetworkTimeoutError` is
+	// the one that matters: its Firestore `code` is empty, so without this guard a
+	// timeout would be re-mapped to `RsvpRefusedError` and told to the guest as a
+	// failed save rather than a slow one.
+	if (
+		error instanceof RsvpClosedError ||
+		error instanceof RsvpNotFoundError ||
+		error instanceof RsvpOfflineError ||
+		error instanceof RsvpRefusedError ||
+		error instanceof NetworkTimeoutError
+	) {
+		throw error;
+	}
+
 	const code = (error as { code?: string } | null)?.code ?? '';
 
 	if (code === 'permission-denied') {
@@ -82,7 +98,9 @@ export async function getBackend(): Promise<RsvpBackend | null> {
 			try {
 				// `doc()`, never `where(documentId(), '==', ...)`: the second is a
 				// `list` operation and the deployed ruleset denies those.
-				const snapshot = await firestore.getDoc(firestore.doc(db, 'rsvps', code));
+				const snapshot = await withTimeout(
+					firestore.getDoc(firestore.doc(db, 'rsvps', code))
+				);
 
 				return snapshot.exists() ? readRsvp(snapshot.data()) : null;
 			} catch (error) {
@@ -94,16 +112,17 @@ export async function getBackend(): Promise<RsvpBackend | null> {
 			const { db, firestore } = await getRuntime();
 
 			try {
-				await firestore.updateDoc(firestore.doc(db, 'rsvps', code), {
-					status: response.status,
-					partySize: response.partySize,
-					attendeeNames: response.attendeeNames,
-					dietaryNotes: response.dietaryNotes,
-					message: response.message,
-					// A server timestamp rather than the device clock, so a guest with
-					// the wrong timezone does not file their answer under the wrong day.
-					respondedAt: firestore.serverTimestamp()
-				});
+				await withTimeout(
+					firestore.updateDoc(firestore.doc(db, 'rsvps', code), {
+						status: response.status,
+						partySize: response.partySize,
+						attendeeNames: response.attendeeNames,
+						message: response.message,
+						// A server timestamp rather than the device clock, so a guest with
+						// the wrong timezone does not file their answer under the wrong day.
+						respondedAt: firestore.serverTimestamp()
+					})
+				);
 			} catch (error) {
 				mapError(error);
 			}

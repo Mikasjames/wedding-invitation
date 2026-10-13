@@ -6,8 +6,8 @@ import { parseCsv } from '../rsvp/guests';
  *
  * Every field is quoted unconditionally. Quoting only when necessary is a few
  * characters shorter and produces files that are correct until someone puts a
- * comma in a dietary note — which they will, the moment there are two of them.
- * Always-quoted also round-trips through `parseCsv` exactly.
+ * comma in a note to the couple — which they will, the moment there are two of
+ * them. Always-quoted also round-trips through `parseCsv` exactly.
  */
 function cell(value: string | number | null): string {
 	const text = value === null ? '' : String(value);
@@ -48,7 +48,6 @@ export function toCsv(rows: AdminRow[]): string {
 			'status',
 			'confirmed',
 			'names',
-			'dietary',
 			'message',
 			'email',
 			'notes',
@@ -69,7 +68,6 @@ export function toCsv(rows: AdminRow[]): string {
 				// An array has no honest single-cell form. Semicolons read as a list
 				// in a spreadsheet and survive `parseCsv`, which only splits on commas.
 				household.attendeeNames.join('; '),
-				household.dietaryNotes,
 				household.message,
 				household.contactEmail,
 				household.notes,

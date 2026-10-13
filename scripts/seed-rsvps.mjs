@@ -93,7 +93,6 @@ function blankResponse() {
 		status: 'pending',
 		partySize: 0,
 		attendeeNames: [],
-		dietaryNotes: '',
 		message: '',
 		respondedAt: null
 	};

@@ -1,5 +1,5 @@
 import type { RsvpBackend } from './backend';
-import { describeFailure } from './backend';
+import { describeFailure, describeSaveFailure } from './backend';
 import { extractCode } from './codes';
 import type { Intent, ResponseFields, Rsvp } from './types';
 
@@ -49,7 +49,6 @@ export class RsvpFlow {
 	intent = $state<Intent>('attending');
 	partySize = $state(1);
 	attendeeNames = $state<string[]>([]);
-	dietaryNotes = $state('');
 	message = $state('');
 
 	/** Set when a lookup or save fails, and cleared by the next attempt. */
@@ -134,7 +133,6 @@ export class RsvpFlow {
 		this.intent = 'attending';
 		this.partySize = 1;
 		this.attendeeNames = [];
-		this.dietaryNotes = '';
 		this.message = '';
 		this.error = null;
 	}
@@ -203,7 +201,6 @@ export class RsvpFlow {
 			? Math.max(1, Math.min(household.partySize, household.seatsAllocated))
 			: Math.max(1, household.seatsAllocated);
 		this.attendeeNames = [...household.attendeeNames];
-		this.dietaryNotes = household.dietaryNotes;
 		this.message = household.message;
 	}
 
@@ -259,13 +256,18 @@ export class RsvpFlow {
 		this.phase = 'submitting';
 		this.error = null;
 
+		// Read before the write: the rules' cutoff check cannot refuse a household
+		// that has never answered, so a refusal on a first answer means something
+		// other than a closed RSVP and must not be described as one. See
+		// `describeSaveFailure`.
+		const firstAnswer = this.household?.status === 'pending';
+
 		const response: ResponseFields = {
 			status: this.intent,
 			partySize: this.intent === 'declined' ? 0 : this.partySize,
 			// Blank name lines are not an answer, so they are dropped rather than
 			// stored as empty strings the couple would have to clean up.
 			attendeeNames: this.attendeeNames.map((name) => name.trim()).filter(Boolean),
-			dietaryNotes: this.dietaryNotes.trim(),
 			message: this.message.trim(),
 			respondedAt: null
 		};
@@ -289,7 +291,7 @@ export class RsvpFlow {
 			// and throwing away everything they typed to show an error would be the
 			// worst possible response to a dropped connection.
 			this.phase = 'found';
-			this.error = describeFailure(error);
+			this.error = describeSaveFailure(error, firstAnswer);
 		}
 	}
 }

@@ -20,7 +20,6 @@ function household(overrides: Partial<Rsvp> = {}): Rsvp {
 		status: 'pending',
 		partySize: 0,
 		attendeeNames: [],
-		dietaryNotes: '',
 		message: '',
 		respondedAt: null,
 		...overrides
@@ -271,7 +270,6 @@ describe('RsvpFlow.submit', () => {
 	it('sends only the response fields', async () => {
 		h.flow.setPartySize(3);
 		h.flow.attendeeNames = ['Juan', '', '', ''];
-		h.flow.dietaryNotes = ' no shellfish ';
 		h.flow.message = ' congratulations ';
 
 		await h.flow.submit();
@@ -284,7 +282,6 @@ describe('RsvpFlow.submit', () => {
 			status: 'attending',
 			partySize: 3,
 			attendeeNames: ['Juan'],
-			dietaryNotes: 'no shellfish',
 			message: 'congratulations',
 			respondedAt: null
 		});
@@ -339,13 +336,11 @@ describe('RsvpFlow.submit', () => {
 
 		failing.flow.setPartySize(2);
 		failing.flow.message = 'we would not miss it';
-		failing.flow.dietaryNotes = 'one vegetarian';
 
 		await failing.flow.submit();
 
 		expect(failing.flow.phase).toBe('found');
 		expect(failing.flow.message).toBe('we would not miss it');
-		expect(failing.flow.dietaryNotes).toBe('one vegetarian');
 		expect(failing.flow.partySize).toBe(2);
 		expect(failing.flow.error).toMatch(/offline/i);
 		expect(failing.flow.household?.status).toBe('pending');

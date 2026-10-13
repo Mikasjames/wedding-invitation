@@ -65,7 +65,6 @@ export interface ResponseFields {
 	/** Optional, so the couple can seat by name rather than by household. */
 	attendeeNames: string[];
 
-	dietaryNotes: string;
 	message: string;
 	respondedAt: Timestamp | null;
 }
@@ -84,7 +83,6 @@ export const RESPONSE_FIELDS = [
 	'status',
 	'partySize',
 	'attendeeNames',
-	'dietaryNotes',
 	'message',
 	'respondedAt'
 ] as const;
@@ -132,7 +130,6 @@ export function readRsvp(data: Record<string, unknown> | undefined): Rsvp | null
 		attendeeNames: Array.isArray(data.attendeeNames)
 			? data.attendeeNames.filter((n): n is string => typeof n === 'string')
 			: [],
-		dietaryNotes: typeof data.dietaryNotes === 'string' ? data.dietaryNotes : '',
 		message: typeof data.message === 'string' ? data.message : '',
 		respondedAt: (data.respondedAt as Timestamp | null) ?? null
 	};
