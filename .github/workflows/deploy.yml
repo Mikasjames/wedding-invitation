@@ -9,7 +9,7 @@ on:
   push:
     branches:
       - main
-      - feat/admin
+
   # Lets you re-run a deploy from the Actions tab without a dummy commit.
   workflow_dispatch:
 
