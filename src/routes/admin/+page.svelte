@@ -1,5 +1,6 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
+	import AddHousehold from '$lib/admin/AddHousehold.svelte';
 	import AdminPanel from '$lib/admin/AdminPanel.svelte';
 	import AdminStat from '$lib/admin/AdminStat.svelte';
 	import { AdminSession } from '$lib/admin/auth.svelte';
@@ -46,6 +47,14 @@
 	});
 
 	/**
+	 * Signing out has to close this too. The form holds a household being typed,
+	 * and a dashboard left open on a shared laptop should not leave one on screen.
+	 */
+	$effect(() => {
+		if (!auth.signedIn) adding = false;
+	});
+
+	/**
 	 * Why this exists: a custom claim granted by `scripts/set-admin.mjs` does not
 	 * reach an already-issued ID token, so the rules keep refusing somebody who
 	 * has been made an admin until the token is discarded. Refresh, then ask
@@ -57,6 +66,8 @@
 	}
 
 	const t = $derived(guests.totals);
+
+	let adding = $state(false);
 </script>
 
 <svelte:head>
@@ -196,6 +207,20 @@
 					</ul>
 				{/if}
 			</section>
+
+			{#if adding}
+				<AddHousehold list={guests} onclose={() => (adding = false)} />
+			{:else}
+				<div class="flex justify-end">
+					<button
+						type="button"
+						onclick={() => (adding = true)}
+						class="{BUTTON_CLASS} w-full sm:w-auto"
+					>
+						Add a household
+					</button>
+				</div>
+			{/if}
 
 			<div class="overflow-x-auto rounded-2xl border border-gold/20">
 				<table class="w-full min-w-[42rem] border-collapse text-left">

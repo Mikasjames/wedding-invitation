@@ -2,7 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { CODE_LENGTH } from './codes';
 import { isValidCode } from './codes';
-import { parseCsv, summarise, validateGuests } from './guests';
+import {
+	blankResponseFields,
+	isValidSeatCount,
+	newHousehold,
+	ownerFields,
+	parseCsv,
+	SCHEMA_VERSION,
+	summarise,
+	validateGuests
+} from './guests';
+import { RESPONSE_FIELDS } from './types';
 
 const HEADER = 'household,side,seats,code,email,notes';
 
@@ -256,5 +266,75 @@ describe('data/guests.example.csv', () => {
 		const { guests } = validateGuests(parseCsv(example));
 
 		expect(guests.some((guest) => !guest.active)).toBe(true);
+	});
+});
+
+const HOUSEHOLD = {
+	householdName: 'Dela Cruz Family',
+	side: 'bride' as const,
+	seatsAllocated: 4,
+	active: true,
+	contactEmail: 'jc@example.com',
+	notes: ''
+};
+
+describe('newHousehold', () => {
+	/**
+	 * The one that matters. `isBeforeCutoff()` in the deployed rules branches on
+	 * `resource.data.status == 'pending'`; a household created without `status`
+	 * reads as `null` there, fails that branch, and is refused after the deadline
+	 * having never been asked. Adding a guest-writable field to `ResponseFields`
+	 * without giving it a blank value would reproduce that.
+	 */
+	it('starts with exactly the keys a guest is allowed to change', () => {
+		expect(Object.keys(blankResponseFields()).sort()).toEqual([...RESPONSE_FIELDS].sort());
+	});
+
+	it('starts pending, with nobody confirmed', () => {
+		expect(blankResponseFields()).toMatchObject({ status: 'pending', partySize: 0 });
+	});
+
+	it('carries the couple\'s own fields and nothing guest-writable on top', () => {
+		const doc = newHousehold(HOUSEHOLD);
+
+		expect(doc).toMatchObject({
+			schemaVersion: SCHEMA_VERSION,
+			householdName: 'Dela Cruz Family',
+			seatsAllocated: 4,
+			active: true
+		});
+	});
+
+	// Well-formed by construction. The admin branch short-circuits `isWellFormed()`,
+	// so a create *can* produce a document the guest rules would refuse — and a
+	// household that cannot RSVP is invisible, because it never gets far enough to
+	// complain.
+	it('is a document the guest rules would accept an answer against', () => {
+		const doc = newHousehold(HOUSEHOLD);
+
+		expect(doc.partySize).toBeLessThanOrEqual(doc.seatsAllocated);
+		expect(doc.status === 'pending' ? doc.partySize === 0 : doc.partySize >= 1).toBe(true);
+	});
+
+	// What the seed writes on a re-run: the couple's fields, so a collected answer
+	// is never in the write.
+	it('separates the owner fields from the blank response', () => {
+		expect(Object.keys(ownerFields(HOUSEHOLD))).not.toContain('partySize');
+		expect(Object.keys(newHousehold(HOUSEHOLD))).toEqual(
+			expect.arrayContaining([...Object.keys(ownerFields(HOUSEHOLD)), ...Object.keys(blankResponseFields())])
+		);
+	});
+});
+
+describe('isValidSeatCount', () => {
+	it('refuses zero and fractions', () => {
+		expect(isValidSeatCount(0)).toBe(false);
+		expect(isValidSeatCount(2.5)).toBe(false);
+		expect(isValidSeatCount(Number.NaN)).toBe(false);
+	});
+
+	it('accepts a whole number of at least one', () => {
+		expect(isValidSeatCount(1)).toBe(true);
+		expect(isValidSeatCount(12)).toBe(true);
 	});
 });

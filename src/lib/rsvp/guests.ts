@@ -40,6 +40,87 @@ export const REQUIRED_COLUMNS = ['household', 'seats'] as const;
 export const OPTIONAL_COLUMNS = ['side', 'code', 'email', 'notes', 'active'] as const;
 
 /**
+ * What a household document needs, narrowed from `GuestSeed`.
+ *
+ * The code is not here because the two callers choose it differently — the seed
+ * generates one per spreadsheet row, and the dashboard is handed a code when a
+ * card has already been printed. The spreadsheet line number means nothing away
+ * from a file.
+ */
+export type HouseholdSeed = Omit<GuestSeed, 'line' | 'code'>;
+
+/** Bumped when the document shape changes in a way an old reader must notice. */
+export const SCHEMA_VERSION = 1;
+
+/**
+ * The fields the couple owns. A guest may never write any of these.
+ *
+ * `seatsAllocated` lives here and not in the response, which is the whole point:
+ * it is the couple's allotment, and `partySize` is what a guest may move.
+ */
+export function ownerFields(guest: HouseholdSeed) {
+	return {
+		schemaVersion: SCHEMA_VERSION,
+		householdName: guest.householdName,
+		side: guest.side,
+		seatsAllocated: guest.seatsAllocated,
+		// From the spreadsheet, not hardcoded: this is written on every seed, so a
+		// literal would silently re-invite anyone archived in the console.
+		active: guest.active,
+		contactEmail: guest.contactEmail,
+		notes: guest.notes
+	};
+}
+
+/**
+ * A household's answer, before they have given one.
+ *
+ * Exactly the keys of `RESPONSE_FIELDS`, and that exactness is load-bearing. The
+ * deployed rules branch on `resource.data.status == 'pending'` inside
+ * `isBeforeCutoff()`, so a household created without a `status` field — where the
+ * stored value reads as `null` rather than `'pending'` — falls through to the
+ * timestamp check and is refused after the deadline, having never been asked.
+ *
+ * `guests.test.ts` asserts these keys against `RESPONSE_FIELDS` directly.
+ */
+export function blankResponseFields() {
+	return {
+		status: 'pending',
+		partySize: 0,
+		attendeeNames: [] as string[],
+		message: '',
+		respondedAt: null
+	};
+}
+
+/**
+ * Everything a household document contains on the day it is created.
+ *
+ * One shape for both callers — the seed script and the dashboard — because two
+ * shapes that merely look alike will differ eventually, and a household created
+ * by the wrong one behaves differently from its neighbours in ways nobody notices
+ * until a deadline passes. Timestamps are left to the caller: `firebase-admin`
+ * and `firebase/web` have different `serverTimestamp()` sentinels.
+ */
+export function newHousehold(guest: HouseholdSeed) {
+	return { ...ownerFields(guest), ...blankResponseFields() };
+}
+
+/**
+ * A household's allotment. At least one, because zero seats is a household
+ * nobody is able to accept — it cannot be confirmed, and the flow hides the
+ * choice from the guest rather than offering a refusal.
+ */
+export function isValidSeatCount(seats: number): boolean {
+	return Number.isInteger(seats) && seats >= 1;
+}
+
+/** Shared so a household the dashboard accepts is one the seed would have taken. */
+export function isValidEmail(value: string): boolean {
+	return EMAIL.test(value);
+}
+
+/**
  * Minimal RFC4180 reader: quoted fields, embedded commas, `""` escapes, and the
  * BOM a spreadsheet export starts with — which would otherwise become part of
  * the first header name and make "household" unrecognised.
@@ -135,13 +216,13 @@ export function validateGuests(rows: string[][]): {
 
 		if (rawSeats === '') fail('`seats` is empty.');
 		else if (!Number.isInteger(seats)) fail(`\`seats\` is "${rawSeats}", not a whole number.`);
-		else if (seats < 1) fail(`\`seats\` is ${seats}. Every household needs at least one seat.`);
+		else if (!isValidSeatCount(seats)) fail(`\`seats\` is ${seats}. Every household needs at least one seat.`);
 
 		const side = (cells[at('side')] ?? '').toLowerCase() || 'both';
 		if (!SIDES.has(side)) fail(`\`side\` is "${side}" — use bride, groom or both.`);
 
-		const rawEmail = cells[at('email')] ?? '';
-		if (rawEmail && !EMAIL.test(rawEmail)) {
+		const rawEmail = (cells[at('email')] ?? '').trim();
+		if (rawEmail && !isValidEmail(rawEmail)) {
 			fail(`\`email\` is "${rawEmail}", which does not look like an address.`);
 		}
 

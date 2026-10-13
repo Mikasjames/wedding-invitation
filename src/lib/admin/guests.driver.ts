@@ -1,10 +1,40 @@
 import type { AdminRow } from './row';
+import type { Side } from '../rsvp/types.ts';
+
+/**
+ * A household the couple is adding from the dashboard.
+ *
+ * Narrower than a spreadsheet row: there is no line number, and the code is
+ * optional because the couple only supply one when a card is already printed with
+ * it. Everything else matches what `pnpm seed` would have written, so a household
+ * added here is indistinguishable from one added in bulk.
+ */
+export interface NewHousehold {
+	householdName: string;
+	side: Side;
+	seatsAllocated: number;
+	contactEmail: string | null;
+	notes: string;
+
+	/** Only when a card already carries this code. Generated when absent. */
+	code?: string;
+}
+
+/** Enough to send the invitation, which is the only reason to create one. */
+export interface CreatedHousehold {
+	code: string;
+	householdName: string;
+	seatsAllocated: number;
+}
 
 /**
  * What the dashboard needs from storage.
  *
- * Read-only for now. `save` arrives with `HouseholdEditor`; adding it here
- * before anything calls it would mean shipping a method no state machine drives.
+ * `loadAll` and `create` only. Editing an existing household is still to come,
+ * and it is a genuinely harder problem than this one: lowering `seatsAllocated`
+ * under a confirmed `partySize` produces a document that fails `isWellFormed()`,
+ * which locks that household out of its own RSVP with no repair path. A create
+ * has no such hazard, which is why it goes first.
  */
 export interface GuestListBackend {
 	/**
@@ -14,12 +44,26 @@ export interface GuestListBackend {
 	 * answer — see `AdminSession` for why the client does not decide that itself.
 	 */
 	loadAll(): Promise<AdminRow[]>;
+
+	/**
+	 * Creates one household, and resolves with the code it was given.
+	 *
+	 * Refuses rather than overwrites. `setDoc` on a document id that already exists
+	 * silently replaces whatever was there, and a code mistyped onto somebody else's
+	 * household would destroy a real answer with nothing in the logs to say so.
+	 *
+	 * Throws `AdminCodeTakenError` if the code is already in use.
+	 */
+	create(household: NewHousehold): Promise<CreatedHousehold>;
 }
 
 export class AdminDeniedError extends Error {}
 export class AdminDatabaseMissingError extends Error {}
 export class AdminOfflineError extends Error {}
 export class AdminFailedError extends Error {}
+
+/** The supplied code is already someone's household. Not a generic failure. */
+export class AdminCodeTakenError extends Error {}
 
 /**
  * Shown when the rules refuse the collection.
@@ -40,6 +84,12 @@ export const ACCESS_DENIED =
  */
 export function describeGuestError(error: unknown): string {
 	if (error instanceof AdminDeniedError) return ACCESS_DENIED;
+
+	// Worth its own line: the couple's likely reaction to a taken code is to try
+	// typing it differently, which is the opposite of what would help.
+	if (error instanceof AdminCodeTakenError) {
+		return 'That code is already in use by another household. Check it, or leave the code blank and we will generate one.';
+	}
 
 	if (error instanceof AdminDatabaseMissingError) {
 		return 'No Firestore database was found for this project. Check PUBLIC_FIREBASE_PROJECT_ID in .env, and that Firestore has been created in michalemuel-wedding.';

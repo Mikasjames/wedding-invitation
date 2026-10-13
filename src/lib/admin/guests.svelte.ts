@@ -2,7 +2,9 @@ import {
 	ACCESS_DENIED,
 	AdminDeniedError,
 	describeGuestError,
-	type GuestListBackend
+	type CreatedHousehold,
+	type GuestListBackend,
+	type NewHousehold
 } from './guests.driver';
 import { totals as totalRows } from './totals';
 import type { AdminRow } from './row';
@@ -29,6 +31,27 @@ export class GuestList {
 
 	/** A message for the `failed` banner. `null` for `denied`, which the page words itself. */
 	error = $state<string | null>(null);
+
+	/** A household is being created. */
+	creating = $state(false);
+
+	/**
+	 * Why the last create failed.
+	 *
+	 * Deliberately separate from `error`, and deliberately not allowed to move
+	 * `phase`. A refused create says nothing about whether the guest list still
+	 * loads, and replacing a working list with "not on the admin list" because one
+	 * write was refused would be both alarming and wrong.
+	 */
+	createError = $state<string | null>(null);
+
+	/**
+	 * The household just created, kept so the page can show something sendable.
+	 *
+	 * A code nobody can deliver is worse than no code at all, so creating one is
+	 * only half the job.
+	 */
+	lastCreated = $state<CreatedHousehold | null>(null);
 
 	/** Derived rather than recomputed on read; `totals` walks every row. */
 	readonly totals = $derived(totalRows(this.rows));
@@ -115,6 +138,51 @@ export class GuestList {
 		this.rows = [];
 		this.phase = 'idle';
 		this.error = null;
+		this.lastCreated = null;
+	}
+
+	/**
+	 * Creates one household, then re-reads the list.
+	 *
+	 * Re-read rather than pushing the new row onto `rows`: `totals` is `$derived`
+	 * from the rows, so appending by hand is another place the dashboard can
+	 * disagree with the server. A few hundred rows costs one query and makes the
+	 * totals strip impossible to get wrong.
+	 *
+	 * Returns what was created so the page can offer it to send, or `null` if it
+	 * failed — the reason is on `createError` either way.
+	 */
+	async create(household: NewHousehold): Promise<CreatedHousehold | null> {
+		// Set before the first await, deliberately. Checking and then setting either
+		// side of an `await` lets two calls both pass the guard, and the couple gets
+		// two households for one form.
+		if (this.creating) return null;
+
+		this.creating = true;
+		this.createError = null;
+
+		try {
+			const backend = await this.#getBackend();
+
+			if (!backend) {
+				this.createError = 'Firestore is not configured for this build.';
+				return null;
+			}
+
+			const created = await backend.create(household);
+
+			await this.load();
+
+			this.lastCreated = created;
+
+			return created;
+		} catch (error) {
+			this.createError = describeGuestError(error);
+
+			return null;
+		} finally {
+			this.creating = false;
+		}
 	}
 
 	/** For the page's "not on the admin list" wording. */

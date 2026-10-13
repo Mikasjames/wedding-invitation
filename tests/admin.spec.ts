@@ -40,6 +40,14 @@ test.describe('the admin dashboard', () => {
 		await expect(page.getByRole('button', { name: /sign in/i })).toHaveCount(0);
 	});
 
+	// The same principle, for the control that was easiest to get wrong: "Add a
+	// household" needs a loaded list to sit on, so on a build with no Firebase it
+	// must not appear at all. A button that submits into an unconfigured backend
+	// produces an error with nothing to have asked.
+	test('never offers to add a household it cannot store', async ({ page }) => {
+		await expect(page.getByRole('button', { name: /add a household/i })).toHaveCount(0);
+	});
+
 	test('renders no guest data', async ({ page }) => {
 		await expect(page.locator('table')).toHaveCount(0);
 		await expect(page.getByText(/seats invited/i)).toHaveCount(0);

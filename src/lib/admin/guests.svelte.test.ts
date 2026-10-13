@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
 	ACCESS_DENIED,
+	AdminCodeTakenError,
 	AdminDatabaseMissingError,
 	AdminDeniedError,
 	AdminFailedError,
@@ -34,16 +35,27 @@ function backend(options: { rows?: AdminRow[]; throws?: Error } = {}): GuestList
 		loadAll: async () => {
 			if (options.throws) throw options.throws;
 			return options.rows ?? ROWS;
-		}
+		},
+		create: async (household) => ({
+			code: household.code ?? 'NEW0000001',
+			householdName: household.householdName,
+			seatsAllocated: household.seatsAllocated
+		})
 	};
 }
 
 function setup(resolved: GuestListBackend | null = backend()) {
 	const loadAll = vi.fn((resolved?.loadAll ?? (async () => [])) as GuestListBackend['loadAll']);
+	const create = vi.fn(
+		(resolved?.create ?? (async () => {
+			throw new Error('unused');
+		})) as GuestListBackend['create']
+	);
 
 	return {
 		loadAll,
-		list: new GuestList(async () => (resolved ? { loadAll } : null))
+		create,
+		list: new GuestList(async () => (resolved ? { loadAll, create } : null))
 	};
 }
 
@@ -236,6 +248,9 @@ describe('GuestList failures', () => {
 		const denied = new GuestList(async () => ({
 			loadAll: async () => {
 				throw new AdminDeniedError();
+			},
+			create: async () => {
+				throw new AdminDeniedError();
 			}
 		}));
 		await denied.sync('user-2');
@@ -272,6 +287,9 @@ describe('GuestList.reload', () => {
 			loadAll: async () => {
 				if (fail) throw new AdminOfflineError();
 				return ROWS;
+			},
+			create: async () => {
+				throw new AdminOfflineError();
 			}
 		}));
 
@@ -292,6 +310,152 @@ describe('GuestList.reload', () => {
 		await list.load();
 
 		expect(loadAll).not.toHaveBeenCalled();
+	});
+});
+
+const NEW_HOUSEHOLD = {
+	householdName: 'Reyes - Tiong & Chika',
+	side: 'both' as const,
+	seatsAllocated: 6,
+	contactEmail: null,
+	notes: ''
+};
+
+describe('GuestList.create', () => {
+	it('passes the household straight through', async () => {
+		const { list, create } = setup();
+		await list.sync('user-1');
+
+		await list.create(NEW_HOUSEHOLD);
+
+		expect(create).toHaveBeenCalledWith(NEW_HOUSEHOLD);
+	});
+
+	// Totals is `$derived` from the rows, so pushing the new household on by hand
+	// is another place the dashboard can quietly disagree with the server. One
+	// re-read is cheaper than being wrong.
+	it('re-reads the list rather than appending', async () => {
+		const { list, loadAll, create } = setup();
+		await list.sync('user-1');
+		loadAll.mockClear();
+
+		await list.create(NEW_HOUSEHOLD);
+
+		expect(create).toHaveBeenCalledTimes(1);
+		expect(loadAll).toHaveBeenCalled();
+	});
+
+	it('keeps what was created so it can be sent', async () => {
+		const { list } = setup();
+		await list.sync('user-1');
+
+		const created = await list.create(NEW_HOUSEHOLD);
+
+		expect(created).toEqual({
+			code: 'NEW0000001',
+			householdName: 'Reyes - Tiong & Chika',
+			seatsAllocated: 6
+		});
+		expect(list.lastCreated).toEqual(created);
+	});
+
+	// A refused create says nothing about whether the list still loads. Flipping
+	// the dashboard to "not on the admin list" because one write was refused would
+	// be alarming and wrong.
+	it('reports a failure without demoting a working list', async () => {
+		const denied = new GuestList(async () => ({
+			loadAll: async () => ROWS,
+			create: async () => {
+				throw new AdminDeniedError();
+			}
+		}));
+		await denied.sync('user-1');
+
+		const created = await denied.create(NEW_HOUSEHOLD);
+
+		expect(created).toBeNull();
+		expect(denied.createError).toBe(ACCESS_DENIED);
+		expect(denied.phase).toBe('ready');
+		expect(denied.rows).toHaveLength(2);
+	});
+
+	it('explains a code that is already taken', async () => {
+		const taken = new GuestList(async () => ({
+			loadAll: async () => ROWS,
+			create: async () => {
+				throw new AdminCodeTakenError('W8K9JPTR4M');
+			}
+		}));
+		await taken.sync('user-1');
+
+		await taken.create({ ...NEW_HOUSEHOLD, code: 'W8K9JPTR4M' });
+
+		expect(taken.createError).toMatch(/already in use/i);
+		expect(taken.lastCreated).toBeNull();
+	});
+
+	it('clears a stale failure before trying again', async () => {
+		let fail = true;
+		const flaky = new GuestList(async () => ({
+			loadAll: async () => ROWS,
+			create: async () => {
+				if (fail) throw new AdminOfflineError();
+				return { code: 'NEW0000001', householdName: 'A', seatsAllocated: 2 };
+			}
+		}));
+		await flaky.sync('user-1');
+
+		await flaky.create(NEW_HOUSEHOLD);
+		expect(flaky.createError).not.toBeNull();
+
+		fail = false;
+		await flaky.create(NEW_HOUSEHOLD);
+
+		expect(flaky.createError).toBeNull();
+	});
+
+	it('does not send two creates at once', async () => {
+		let release = () => {};
+		const held = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+
+		const slow = new GuestList(async () => ({
+			loadAll: async () => ROWS,
+			create: async () => {
+				await held;
+				return { code: 'NEW0000001', householdName: 'A', seatsAllocated: 2 };
+			}
+		}));
+		await slow.sync('user-1');
+
+		const first = slow.create(NEW_HOUSEHOLD);
+		const second = await slow.create(NEW_HOUSEHOLD);
+
+		expect(second).toBeNull();
+
+		release();
+		await first;
+	});
+
+	it('reports an unconfigured build rather than throwing', async () => {
+		const { list } = setup(null);
+
+		const created = await list.create(NEW_HOUSEHOLD);
+
+		expect(created).toBeNull();
+		expect(list.createError).toMatch(/not configured/i);
+	});
+
+	it('forgets the last household on sign-out', async () => {
+		const { list } = setup();
+		await list.sync('user-1');
+		await list.create(NEW_HOUSEHOLD);
+		expect(list.lastCreated).not.toBeNull();
+
+		await list.sync(null);
+
+		expect(list.lastCreated).toBeNull();
 	});
 });
 

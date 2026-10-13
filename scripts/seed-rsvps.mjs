@@ -21,7 +21,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applicationDefault, cert, initializeApp } from 'firebase-admin/app';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
-import { parseCsv, summarise, validateGuests } from '../src/lib/rsvp/guests.ts';
+import { parseCsv, summarise, validateGuests, newHousehold, ownerFields } from '../src/lib/rsvp/guests.ts';
+import { invitationMessage } from '../src/lib/rsvp/message.ts';
 import { wedding } from '../src/lib/lib/wedding.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -88,11 +89,7 @@ const DEADLINE = wedding.rsvp.deadline;
 const DATABASE_ID = process.env.PUBLIC_FIRESTORE_DATABASE_ID || '(default)';
 
 const message = (household, seats, code) =>
-	`Hi ${household}!\n\n` +
-	`${wedding.names} are getting married and would be honoured by your presence.\n` +
-	`Kindly reply by ${DEADLINE}.\n\n` +
-	`Your invitation: ${SITE}/?code=${code}\n` +
-	`Your code: ${code} — ${seats} ${seats === 1 ? 'seat' : 'seats'} reserved for you.`;
+	invitationMessage({ household, seats, code, site: SITE });
 
 // ---------------------------------------------------------------------------
 // Firestore
@@ -107,37 +104,20 @@ function openDatabase() {
 	);
 }
 
-/** The fields the couple owns. A guest may never write any of these. */
-function seededFields(guest) {
-	return {
-		schemaVersion: 1,
-		householdName: guest.householdName,
-		side: guest.side,
-		seatsAllocated: guest.seatsAllocated,
-		// From the spreadsheet, not hardcoded. See `GuestSeed.active` — this runs
-		// on every seed, so a literal `true` here silently re-invited anyone
-		// archived in the console.
-		active: guest.active,
-		contactEmail: guest.contactEmail,
-		notes: guest.notes
-	};
-}
-
 /**
- * A household's answer starts here, and only on first sight of the document.
+ * What to write for a household.
  *
- * On every later run this is left out of the write entirely. Including it would
- * be the worst bug available to this script: re-running it to add one guest
- * would reset every RSVP already collected back to "pending".
+ * The shapes themselves live in `src/lib/rsvp/guests.ts` and are shared with the
+ * dashboard, which also creates households. Two shapes that merely look alike
+ * will differ eventually, and the difference shows up as one guest's answers
+ * behaving unlike everyone else's.
+ *
+ * Only on first sight of the document does the blank response go in. Including it
+ * on a later run would be the worst bug available to this script: re-running to
+ * add one guest would reset every RSVP already collected back to "pending".
  */
-function blankResponse() {
-	return {
-		status: 'pending',
-		partySize: 0,
-		attendeeNames: [],
-		message: '',
-		respondedAt: null
-	};
+function documentFor(guest, exists) {
+	return exists ? ownerFields(guest) : newHousehold(guest);
 }
 
 /**
@@ -271,15 +251,14 @@ async function main() {
 		const batch = db.batch();
 
 		for (const guest of guests.slice(i, i + 400)) {
-			const data = seededFields(guest);
+			const exists = seen.get(guest.code)?.exists;
+			const data = documentFor(guest, exists);
 
 			data.updatedAt = FieldValue.serverTimestamp();
 
-			if (seen.get(guest.code)?.exists) {
+			if (exists) {
 				updated++;
 			} else {
-				// Only on first sight of the document. See blankResponse().
-				Object.assign(data, blankResponse());
 				data.createdAt = FieldValue.serverTimestamp();
 				created++;
 			}
