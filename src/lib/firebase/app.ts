@@ -31,12 +31,33 @@ const config = {
 	appId: env.PUBLIC_FIREBASE_APP_ID,
 
 	/**
+	 * Which Firestore database to open. See `databaseId` below for why this is
+	 * not just left to the SDK's default.
+	 */
+	databaseId: env.PUBLIC_FIRESTORE_DATABASE_ID,
+
+	/**
 	 * Carried because the deploy workflow passes it through. Unused — analytics
 	 * was not part of the ask — but having it here makes turning it on a one-line
 	 * change rather than a workflow edit.
 	 */
 	measurementId: env.PUBLIC_FIREBASE_MEASUREMENT_ID
 };
+
+/**
+ * The Firestore database to talk to.
+ *
+ * A Firestore project can hold several databases side by side, and the Web SDK
+ * will not guess which one you meant: `getFirestore(app)` always connects to
+ * `(default)`. This project created `base` instead, so an unconfigured build
+ * fails with `Database '(default)' not found` — which looks like a Firebase
+ * outage and is not one.
+ *
+ * `|| '(default)'` rather than `?? '. . .'`: env values arrive as empty strings,
+ * not `undefined`, so a present-but-blank `PUBLIC_FIRESTORE_DATABASE_ID` would
+ * otherwise be passed through and fail.
+ */
+export const databaseId = config.databaseId || '(default)';
 
 /**
  * Whether there is enough configuration to talk to Firestore at all.

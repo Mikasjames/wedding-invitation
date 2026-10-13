@@ -35,6 +35,19 @@ const SITE = 'https://draft-rsvp.mikasjames.com';
 /** Deadline shown in the message. Keep in step with `wedding.rsvp.deadline`. */
 const DEADLINE = '15 January 2027';
 
+/**
+ * Which Firestore database to seed.
+ *
+ * Resolved from `process.env` rather than imported from `src/lib/firebase/app.ts`,
+ * because that module reads `import.meta.env` and imports `$app/environment`,
+ * neither of which Node can load.
+ *
+ * The duplication is the point worth watching: this must resolve to the same
+ * database the client opens. Seed one and read the other and the dashboard shows
+ * all zeros with nothing wrong anywhere in the logs.
+ */
+const DATABASE_ID = process.env.PUBLIC_FIRESTORE_DATABASE_ID || '(default)';
+
 const message = (household, seats, code) =>
 	`Hi ${household}!\n\n` +
 	`Michal & Lemuel are getting married and would be honoured by your presence.\n` +
@@ -50,7 +63,8 @@ function openDatabase() {
 	const key = process.env.FIREBASE_SERVICE_ACCOUNT;
 
 	return getFirestore(
-		initializeApp(key ? { credential: cert(JSON.parse(key)) } : { credential: applicationDefault() })
+		initializeApp(key ? { credential: cert(JSON.parse(key)) } : { credential: applicationDefault() }),
+		DATABASE_ID
 	);
 }
 
@@ -152,6 +166,7 @@ async function main() {
 	console.log(
 		`  bride ${totals.bySide.bride} · groom ${totals.bySide.groom} · both ${totals.bySide.both}`
 	);
+	console.log(`  database: ${DATABASE_ID}`);
 
 	if (DRY_RUN) {
 		// The collision check needs credentials. Previewing the spreadsheet should

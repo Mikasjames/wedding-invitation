@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { getApp, isConfigured } from './app';
+import { databaseId, getApp, isConfigured } from './app';
 import { classifyGuestError, type GuestListBackend } from '../admin/guests.driver';
 import { readAdminRow, sortRows } from '../admin/row';
 
@@ -19,7 +19,7 @@ export async function getGuestListBackend(): Promise<GuestListBackend | null> {
 		async loadAll() {
 			const [app, firestore] = await Promise.all([getApp(), import('firebase/firestore')]);
 
-			const db = firestore.getFirestore(app);
+			const db = firestore.getFirestore(app, databaseId);
 
 			try {
 				// A collection query, which Firestore evaluates as a `list` operation

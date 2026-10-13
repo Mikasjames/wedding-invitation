@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import type { Firestore } from 'firebase/firestore';
-import { getApp, isConfigured } from '../firebase/app';
+import { databaseId, getApp, isConfigured } from '../firebase/app';
 import type { ResponseFields, Rsvp } from './types';
 import { readRsvp } from './types';
 import {
@@ -39,7 +39,7 @@ async function getRuntime(): Promise<Runtime> {
 	runtime ??= (async () => {
 		const [app, firestore] = await Promise.all([getApp(), import('firebase/firestore')]);
 
-		return { db: firestore.getFirestore(app), firestore };
+		return { db: firestore.getFirestore(app, databaseId), firestore };
 	})();
 
 	return runtime;
