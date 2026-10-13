@@ -18,7 +18,7 @@ artwork/seal-grey.svg        VTracer greyscale trace, 745 KB, 60 greys
 artwork/seal-name.svg        VTracer trace of the monogram, 19 KB, 3 paths
   -> node artwork/build-seal.mjs       cream ramp, 16 fills, monogram baked in
   -> pnpm dlx svgo --config artwork/svgo-trace.config.mjs static/seal.svg
-static/seal.svg              117 KB
+static/seal.svg              118 KB
 
   -> node artwork/build-lace.mjs       seamless tile, 55 KB
   -> pnpm dlx svgo --config artwork/svgo-trace.config.mjs static/lace.svg
@@ -40,7 +40,7 @@ The seal renders at a maximum of 232px from a 432-unit canvas and the lace is
 line art, so integer coordinates are well inside a device pixel at every size
 the site uses. `svgo-trace.config.mjs` runs the traced assets at
 `floatPrecision: 0` and keeps the `viewBox`; that alone takes the seal from
-745 KB to 115 KB. Dropping precision to 1 instead gives 227 KB — the savings are
+745 KB to 118 KB. Dropping precision to 1 instead gives 227 KB — the savings are
 almost entirely in the fractional tail of the path data.
 
 ## The wax seal
@@ -88,6 +88,21 @@ string the re-ink pass rewrites.** That is harmless today only by luck: neither
 monogram colour is one of the 16 ramp values, so `reink` falls through to its
 `?? match` and preserves them. Pick a `MONOGRAM_INK` or `MONOGRAM_HI` that *does*
 collide with the cream ramp and it is silently re-mapped to a wax tone.
+
+**The monogram is pressed in two passes, not filled once.** A flat darker fill
+buys the legibility but reads as a label sitting on the wax; a real impression
+has a lit far wall, and that rim is what keeps the darker ink reading as pressed.
+The relief in this trace is lit from the upper left, so the lit wall is the
+**down-right** one: `MONOGRAM_HI` goes down and right, `MONOGRAM_INK` on top of
+it, and the rim shows on the down-right edge alone. Cost is **1.4 KB** — the
+monogram's path data twice.
+
+**The rim offset is a whole number of seal units, and rides on the path
+`transform`.** Below about 2 units it is sub-pixel at every size the seal renders
+at, and `floatPrecision: 0` rounds anything finer away regardless. It must never
+be folded into the path data either: svgo emits *relative* commands, and adding a
+constant to every number pair in a relative path is not a translation — it renders
+as a solid rectangle.
 
 **The scale is only safe because the path uses `M`, `C` and `Z`, and the build
 guards that.** A blanket multiply over the coordinates would destroy an
@@ -186,9 +201,12 @@ names, `INK` is the single colour and `NEAR_WHITE_MIN` is the cut-off.
 
 For the monogram on the seal, `MONOGRAM_INK` is the deboss and `MONOGRAM_W` its
 width in seal units — `MONOGRAM_CX` / `MONOGRAM_CY` place it, and the height
-follows from the source's aspect. Keep `MONOGRAM_INK` just darker than
-`INK_LO` — enough to read, not so dark it stops looking like wax — and off the
-cream ramp's 16 values, or the re-ink pass will eat it.
+follows from the source's aspect. `MONOGRAM_HI` is the rim and `MONOGRAM_LIT` how
+far down and right it sits. `MONOGRAM_INK` sits well below `INK_LO` — it is a
+shadow tone, not a wax tone — and it only reads as pressed because the
+`MONOGRAM_HI` pass puts a lit edge on the far side. Darken it further and it
+becomes ink sitting on top of the wax. Neither monogram colour may collide with
+one of the cream ramp's 16 values, or the re-ink pass will eat it.
 
 ## The hero names
 

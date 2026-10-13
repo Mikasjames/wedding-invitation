@@ -15,9 +15,20 @@ const LEVELS = 22;
  *  so it costs no extra request on the first paint and no component changes. */
 const MONOGRAM = join(SRC_DIR, 'seal-name.svg');
 
-/** Just under the wax's own `INK_LO`, so it reads as impressed rather than
- *  applied. Much darker and it stops looking like wax at all. */
-const MONOGRAM_INK = '#b6a894';
+/** Well below the wax's own `INK_LO` — a shadow tone, not a wax tone. It still
+ *  reads as pressed rather than printed only because `MONOGRAM_HI` under it puts
+ *  a lit edge on the far side; a flat fill this dark reads as ink on top. */
+const MONOGRAM_INK = '#6b5f4c';
+
+/** The lit wall of the impression, offset down-right: the relief in this trace
+ *  is lit from the upper left, so the far wall of a press is the lit one. Drawn
+ *  first, so the dark pass covers all of it but the rim. */
+const MONOGRAM_HI = '#f2ecdf';
+
+/** Offset in seal units. A whole unit or more, because svgo's
+ *  `floatPrecision: 0` rounds anything finer away — and below about 2 units the
+ *  rim is sub-pixel at every size the seal renders at. */
+const MONOGRAM_LIT = 4;
 
 /** Width in seal units, of 432. The monogram is 1234 x 1554 in its source, so
  *  the height follows from it. */
@@ -132,6 +143,22 @@ function monogram() {
 		}
 	}
 
+	/* The lit pass, offset down-right.
+	 *
+	 * The offset rides on the path `transform` and is never folded into the
+	 * path data. svgo emits *relative* commands, and adding a constant to every
+	 * number pair in a relative path is not a translation — it renders as a
+	 * solid rectangle. That is also the obvious "optimisation" to try here
+	 * later, so it is worth saying out loud. */
+	const pathsLit = kept
+		.map((p) => {
+			const d = p.d.replace(/-?\d*\.?\d+/g, (v) => String(Math.round(+v * scale * 10) / 10));
+			const tx = (ox + (p.tx - box.x0) * scale + MONOGRAM_LIT).toFixed(1);
+			const ty = (oy + (p.ty - box.y0) * scale + MONOGRAM_LIT).toFixed(1);
+			return `<path d="${d}" transform="translate(${tx},${ty})"/>`;
+		})
+		.join('\n');
+
 	const paths = kept
 		.map((p) => {
 			const d = p.d.replace(/-?\d*\.?\d+/g, (v) => String(Math.round(+v * scale * 10) / 10));
@@ -140,7 +167,7 @@ function monogram() {
 		.join('\n');
 
 	return {
-		markup: `<g fill="${MONOGRAM_INK}">\n${paths}\n</g>`,
+		markup: `<g fill="${MONOGRAM_HI}">\n${pathsLit}\n</g>\n<g fill="${MONOGRAM_INK}">\n${paths}\n</g>`,
 		dropped: all.length - kept.length,
 		inkW,
 		inkH,
