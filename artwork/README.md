@@ -15,9 +15,10 @@ artwork/plant_N.svg          VTracer output, ~330 KB each, 149-222 colours
 static/plants/plant_N.svg    ~110 KB each, 1 colour + fill-opacity
 
 artwork/seal-grey.svg        VTracer greyscale trace, 745 KB, 60 greys
-  -> node artwork/build-seal.mjs       cream ramp, 16 fills, viewBox added
+artwork/seal-name.svg        VTracer trace of the monogram, 19 KB, 3 paths
+  -> node artwork/build-seal.mjs       cream ramp, 16 fills, monogram baked in
   -> pnpm dlx svgo --config artwork/svgo-trace.config.mjs static/seal.svg
-static/seal.svg              115 KB
+static/seal.svg              117 KB
 
   -> node artwork/build-lace.mjs       seamless tile, 55 KB
   -> pnpm dlx svgo --config artwork/svgo-trace.config.mjs static/lace.svg
@@ -65,6 +66,40 @@ Both `<g>` wrappers are left in place. The first carries
 `transform="scale(0.25)"` and holds a single path; the second carries the fill
 that 614 paths inherit. Stripping the tags to flatten the document unbalances the
 markup and drops that scale, which moves the whole seal off-canvas.
+
+## The monogram
+
+`seal-name.svg` is the script monogram pressed into the face of the seal, and it
+is **baked into `seal.svg` rather than laid over it as a second `<img>`**. Both
+reveals already load that one file, so baking it costs no extra request on the
+first paint and needs no component or CSS changes at all — positioning, the
+`.seal-wax` drop-shadow and both breakpoints' sizing all keep working untouched.
+
+**Its coordinates are pre-multiplied into seal space, not placed under a
+`scale()`.** Both render identically, because `floatPrecision: 0` rounds the path
+data to whole seal units either way — measured at 4 differing pixels out of 32000
+at the seal's largest render size — but pre-scaling is **9 KB smaller**, since it
+turns the source's 4-digit numbers into 2- and 3-digit ones. It also leaves the
+monogram clear of `cleanupNumericValues` rounding a fractional `scale(0.1216)`,
+and makes it ordinary seal-space geometry beside the other 589 paths.
+
+**The monogram is appended to `body` after it is built, not folded into the
+string the re-ink pass rewrites.** That is harmless today only by luck: neither
+monogram colour is one of the 16 ramp values, so `reink` falls through to its
+`?? match` and preserves them. Pick a `MONOGRAM_INK` or `MONOGRAM_HI` that *does*
+collide with the cream ramp and it is silently re-mapped to a wax tone.
+
+**The scale is only safe because the path uses `M`, `C` and `Z`, and the build
+guards that.** A blanket multiply over the coordinates would destroy an
+elliptical arc, whose radii, rotation and two flags are not all lengths. Re-tracing
+the monogram is exactly the change that would introduce one.
+
+`NEAR_WHITE_MIN` is the names' `0xD0`, and this trace needs it twice over: it has
+the usual full-canvas backdrop, **and** a near-white swash sitting *inside* the
+descender of the `L`. Dropped, both are the smudge failure described above.
+
+The build **throws** rather than emitting a seal with no monogram, so a missing
+`seal-name.svg` cannot quietly ship a blank wax face.
 
 ## The lace
 
@@ -148,6 +183,12 @@ For the seal, `INK_LO` / `INK_HI` set the ramp and `LEVELS` the quantisation. Fo
 the lace, `TILE`, `SPRIG_COUNT` and `BLOSSOM_COUNT` set the density, and `SEED`
 fixes which pattern you get — change it to reshuffle the whole tile. For the
 names, `INK` is the single colour and `NEAR_WHITE_MIN` is the cut-off.
+
+For the monogram on the seal, `MONOGRAM_INK` is the deboss and `MONOGRAM_W` its
+width in seal units — `MONOGRAM_CX` / `MONOGRAM_CY` place it, and the height
+follows from the source's aspect. Keep `MONOGRAM_INK` just darker than
+`INK_LO` — enough to read, not so dark it stops looking like wax — and off the
+cream ramp's 16 values, or the re-ink pass will eat it.
 
 ## The hero names
 
