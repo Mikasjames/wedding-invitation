@@ -25,3 +25,24 @@ vite.config.ts.timestamp-*
 # Test output
 /test-results
 /playwright-report
+
+# Guest data and generated invitation messages.
+#
+# `data/guests.csv` is a list of real people — names, households, email
+# addresses. `out/links.csv` carries their invite codes, which are the only thing
+# standing between that list and anyone who guesses one. Neither belongs in git.
+# The .example.csv beside them is the template and *is* tracked.
+#
+# Ignoring `/data/*` rather than `/data/`: git does not descend into an excluded
+# directory, so excluding the directory itself would make the negation below
+# unreachable.
+/data/*
+!/data/guests.example.csv
+/out/
+
+# Firebase service-account keys. Firebase names them
+# `<project>-firebase-adminsdk-<hash>.json`, so match on the shape rather than the
+# exact name.
+*service*account*.json
+*service-account*.json
+*-firebase-adminsdk-*.json

@@ -64,4 +64,18 @@ describe('wedding', () => {
 		expect(wedding.reception.venue).toBeTruthy();
 		expect(wedding.reception.address).toBeTruthy();
 	});
+
+	// The RSVP deadline was briefly set past the ceremony, which is invisible in
+	// every other assertion here — both strings are well-formed dates. Parse the
+	// label as written (it is a display string, not ISO) and require the cutoff to
+	// fall before the ceremony, so the next person to retune one of the two finds
+	// out from this failure instead of from the couple.
+	it('closes RSVPs before the ceremony', () => {
+		const deadline = Date.parse(wedding.rsvp.deadline);
+
+		expect(Number.isNaN(deadline), `"${wedding.rsvp.deadline}" is not a readable date`).toBe(
+			false
+		);
+		expect(deadline).toBeLessThan(wedding.start.getTime());
+	});
 });

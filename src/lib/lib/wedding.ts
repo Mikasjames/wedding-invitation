@@ -91,9 +91,28 @@ dressCode: {
 	},
 
 	rsvp: {
-		deadline: '1 April 2027',
-		endpoint: 'https://formspree.io/f/YOUR-FORM-ID',
-		contact: 'to be announced'
+		/**
+		 * Shown to guests, and checked against `wedding.start` in
+		 * `wedding.test.ts` because this value has been *after* the ceremony
+		 * before.
+		 *
+		 * MUST match the `isBeforeCutoff()` timestamp in `firestore.rules` — the
+		 * rules cannot read this file, so nothing keeps the two in step except
+		 * whoever changes them. Confirm the real cutoff with the couple.
+		 */
+		deadline: '15 January 2027',
+
+		/**
+		 * Where a guest goes when their code does not work — which will happen,
+		 * because codes are read off cards and typed on phones. Empty rather than
+		 * a placeholder mailbox, so the flow renders the name as plain text instead
+		 * of a `mailto:` that bounces.
+		 */
+		contact: 'to be announced',
+		contactEmail: '',
+
+		/** Dead — RSVPs go to Firestore through src/lib/rsvp/ now. */
+		endpoint: 'https://formspree.io/f/YOUR-FORM-ID'
 	},
 
 	registry: [

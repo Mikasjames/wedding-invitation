@@ -1,2 +1,7 @@
 allowBuilds:
   esbuild: true
+  # Transitive deps of the Firebase Web SDK. Its postinstall is a no-op check,
+  # but leaving it unapproved makes `pnpm install` print an error that CI would
+  # inherit on every deploy.
+  '@firebase/util': true
+  protobufjs: true

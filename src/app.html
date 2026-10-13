@@ -5,6 +5,13 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
 		<meta name="theme-color" content="#ebded5" />
+		<!--
+			The RSVP flow puts an invite code in the URL, and that code is the only
+			thing standing between a household's details and anyone who guesses it.
+			All assets are local, so a referrer would leak it only once the page
+			grows an outbound link — the "email the couple" link is exactly that.
+		-->
+		<meta name="referrer" content="no-referrer" />
 		<noscript>
 			<style>
 				[data-curtain],

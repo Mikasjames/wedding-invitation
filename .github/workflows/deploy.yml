@@ -41,6 +41,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm build
+        # The Firebase web config is baked into the bundle at build time. These
+        # are repository secrets, not environment secrets, and they are empty on a
+        # fork's deploy — which is fine: the RSVP flow detects the missing config
+        # and renders "RSVPs are not open just yet" instead of failing the build.
+        #
+        # The values are public by design (they ship inside every client bundle
+        # and are protected by firestore.rules), so this is hygiene, not secrecy.
+        env:
+          PUBLIC_FIREBASE_API_KEY: ${{ secrets.PUBLIC_FIREBASE_API_KEY }}
+          PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.PUBLIC_FIREBASE_PROJECT_ID }}
+          PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          PUBLIC_FIREBASE_APP_ID: ${{ secrets.PUBLIC_FIREBASE_APP_ID }}
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
