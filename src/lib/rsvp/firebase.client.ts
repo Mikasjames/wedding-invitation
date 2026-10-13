@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import type { Firestore } from 'firebase/firestore';
+import { getApp, isConfigured } from '../firebase/app';
 import type { ResponseFields, Rsvp } from './types';
 import { readRsvp } from './types';
 import {
@@ -9,35 +10,6 @@ import {
 	RsvpOfflineError,
 	RsvpRefusedError
 } from './backend';
-
-/**
- * Reads the Firebase web config from Vite's env.
- *
- * These are not secrets — the Firebase web config is designed to ship inside
- * client bundles and is protected by security rules, not by being hidden. They
- * come through `import.meta.env` rather than `$env/static/public` because the
- * latter only generates its exports from a real `.env`, which would break the
- * build on a fresh clone and in the Playwright web server.
- *
- * Every lookup goes through `env` as a typed record: a missing key yields
- * `undefined` rather than a build error, which is what lets the RSVP flow
- * degrade to "not available yet" on a checkout with no `.env`.
- */
-const env = import.meta.env as Record<string, string | undefined>;
-
-const config = {
-	apiKey: env.PUBLIC_FIREBASE_API_KEY,
-	authDomain: env.PUBLIC_FIREBASE_AUTH_DOMAIN,
-	projectId: env.PUBLIC_FIREBASE_PROJECT_ID,
-	storageBucket: env.PUBLIC_FIREBASE_STORAGE_BUCKET,
-	messagingSenderId: env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-	appId: env.PUBLIC_FIREBASE_APP_ID
-};
-
-/** Whether there is enough configuration to talk to Firestore at all. */
-export function isConfigured(): boolean {
-	return Boolean(config.apiKey && config.projectId && config.appId);
-}
 
 /** The Firestore instance and the SDK namespace it came from, loaded together. */
 type Runtime = { db: Firestore; firestore: typeof import('firebase/firestore') };
@@ -65,12 +37,7 @@ async function getRuntime(): Promise<Runtime> {
 	}
 
 	runtime ??= (async () => {
-		const [{ initializeApp, getApps }, firestore] = await Promise.all([
-			import('firebase/app'),
-			import('firebase/firestore')
-		]);
-
-		const app = getApps()[0] ?? initializeApp(config);
+		const [app, firestore] = await Promise.all([getApp(), import('firebase/firestore')]);
 
 		return { db: firestore.getFirestore(app), firestore };
 	})();
