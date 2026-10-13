@@ -17,6 +17,16 @@ columns are required:
 | `code` | no | Leave blank and one is generated. Supplying one yourself means it has to be exactly 10 characters of `0-9A-Z` minus `I L O U`. |
 | `email` | no | For the couple's reminder list. Never shown to a guest. |
 | `notes` | no | Couple-internal. Never shown to a guest. |
+| `active` | no | `no` archives the household. Blank means still invited. |
+
+`active` is the column to reach for when a household has to come off the list
+after the messages have gone out. Their code keeps resolving rather than
+erroring, because it may already be printed and in someone's inbox — but the
+guest can no longer answer, and no new invitation message is written for them.
+
+It lives in the spreadsheet rather than only in the console because the seed
+writes it on every run. A household archived by hand would be switched back on
+the next `pnpm seed`, and nobody would have decided that.
 
 There is deliberately no "search names" column. Guests look themselves up by
 code, so there is no search to make robust against `Ma. Cristina` versus
@@ -78,7 +88,10 @@ half-seeded guest list is worse than an unseeded one — some households would h
 working codes and others would not, and nothing in the data would say which.
 
 Output goes to `out/links.csv`, with the code, the household, the link, and a
-message ready to paste into Messenger.
+message ready to paste into Messenger. The domain, the deadline and the names
+in those messages are read from `static/CNAME` and `src/lib/lib/wedding.ts`
+rather than written out here, so there is nothing in this script to keep in step
+with the site.
 
 ## Re-running it
 

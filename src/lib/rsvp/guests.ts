@@ -14,14 +14,30 @@ export interface GuestSeed {
 	seatsAllocated: number;
 	contactEmail: string | null;
 	notes: string;
+
+	/**
+	 * Whether the household is still invited.
+	 *
+	 * Archived rather than deleted, because a code may already be printed on paper
+	 * and in sent messages — the link has to keep resolving to something that makes
+	 * sense. It must live in the spreadsheet rather than only in the console,
+	 * because the seed writes `active` on every run: a household archived by hand
+	 * would otherwise be switched back on by the next `pnpm seed`, and the guest's
+	 * code would resume working without anyone deciding that it should.
+	 */
+	active: boolean;
 }
 
 const SIDES = new Set(['bride', 'groom', 'both']);
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
+/** Every spelling of yes and no a spreadsheet might produce. */
+const TRUTHY = new Set(['yes', 'y', 'true', '1', 'active', 'invited']);
+const FALSY = new Set(['no', 'n', 'false', '0', 'archived', 'inactive']);
+
 /** The header the couple is given, and the two columns that are not optional. */
 export const REQUIRED_COLUMNS = ['household', 'seats'] as const;
-export const OPTIONAL_COLUMNS = ['side', 'code', 'email', 'notes'] as const;
+export const OPTIONAL_COLUMNS = ['side', 'code', 'email', 'notes', 'active'] as const;
 
 /**
  * Minimal RFC4180 reader: quoted fields, embedded commas, `""` escapes, and the
@@ -148,6 +164,17 @@ export function validateGuests(rows: string[][]): {
 			seen.set(code, householdName || '(unnamed)');
 		}
 
+		// Blank means still invited — the column is there to drop someone, and a
+		// household should not have to be marked active to be.
+		const rawActive = (cells[at('active')] ?? '').toLowerCase();
+		let active = true;
+
+		if (rawActive) {
+			if (TRUTHY.has(rawActive)) active = true;
+			else if (FALSY.has(rawActive)) active = false;
+			else fail(`\`active\` is "${rawActive}" — use yes or no.`);
+		}
+
 		guests.push({
 			line,
 			code,
@@ -155,7 +182,8 @@ export function validateGuests(rows: string[][]): {
 			side: side as GuestSeed['side'],
 			seatsAllocated: seats,
 			contactEmail: rawEmail || null,
-			notes: cells[at('notes')] ?? ''
+			notes: cells[at('notes')] ?? '',
+			active
 		});
 	}
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { CODE_LENGTH } from './codes';
 import { isValidCode } from './codes';
 import { parseCsv, summarise, validateGuests } from './guests';
@@ -197,5 +198,63 @@ describe('summarise', () => {
 		const { guests } = check(`${HEADER}\nA,bride,4\nB,bride,bogus`);
 
 		expect(summarise(guests).seats).toBe(4);
+	});
+});
+
+const ACTIVE_HEADER = 'household,seats,active';
+
+describe('the active column', () => {
+	// The reason the column defaults to true: a household should not have to be
+	// marked as invited in order to be invited.
+	it('treats a blank or absent column as still invited', () => {
+		expect(check(`${HEADER}\nA,2`).guests[0].active).toBe(true);
+		expect(check(`${ACTIVE_HEADER}\nA,2,`).guests[0].active).toBe(true);
+	});
+
+	it('archives on no', () => {
+		expect(check(`${ACTIVE_HEADER}\nA,2,no`).guests[0].active).toBe(false);
+	});
+
+	// A spreadsheet hands back whatever the couple typed.
+	it('accepts the spellings a spreadsheet produces', () => {
+		for (const yes of ['yes', 'y', 'true', '1', 'active', 'invited', 'YES']) {
+			expect(check(`${ACTIVE_HEADER}\nA,2,${yes}`).guests[0].active).toBe(true);
+		}
+
+		for (const no of ['no', 'n', 'false', '0', 'archived', 'inactive', 'No']) {
+			expect(check(`${ACTIVE_HEADER}\nA,2,${no}`).guests[0].active).toBe(false);
+		}
+	});
+
+	// Silently reading an unknown value as "invited" would re-send an invitation to
+	// someone who thought they had been taken off the list.
+	it('rejects a value it cannot read', () => {
+		const { problems } = check(`${ACTIVE_HEADER}\nA,2,maybe`);
+
+		expect(problems).toHaveLength(1);
+		expect(problems[0]).toContain('`active` is "maybe"');
+	});
+});
+
+// `data/guests.example.csv` is the file the couple copies, so it is the first
+// thing that ever reaches `validateGuests`. The test above re-types it inline,
+// which cannot catch the two drifting apart — a column added to the example that
+// the validator does not know, or a row it advertises as working and is not.
+describe('data/guests.example.csv', () => {
+	const example = readFileSync(
+		new URL('../../../data/guests.example.csv', import.meta.url),
+		'utf8'
+	);
+
+	it('validates with no problems', () => {
+		expect(validateGuests(parseCsv(example)).problems).toEqual([]);
+	});
+
+	// Otherwise the example teaches nothing about the one thing it is least able to
+	// put in prose: what dropping a household actually looks like.
+	it('demonstrates an archived household', () => {
+		const { guests } = validateGuests(parseCsv(example));
+
+		expect(guests.some((guest) => !guest.active)).toBe(true);
 	});
 });
