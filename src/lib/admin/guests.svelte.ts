@@ -1,0 +1,122 @@
+import {
+	ACCESS_DENIED,
+	AdminDeniedError,
+	describeGuestError,
+	type GuestListBackend
+} from './guests.driver';
+import { totals as totalRows } from './totals';
+import type { AdminRow } from './row';
+
+export type GuestListPhase =
+	| 'idle'
+	| 'loading'
+	| 'ready'
+	| 'denied'
+	| 'failed'
+		| 'unconfigured';
+
+/**
+ * The guest list, as state.
+ *
+ * Takes a uid rather than an `AdminSession`, so it has no opinion about who is
+ * signed in and no way to check permissions itself — `denied` arrives as an
+ * error the backend threw, decided entirely by the rules.
+ */
+export class GuestList {
+	phase = $state<GuestListPhase>('idle');
+
+	rows = $state<AdminRow[]>([]);
+
+	/** A message for the `failed` banner. `null` for `denied`, which the page words itself. */
+	error = $state<string | null>(null);
+
+	/** Derived rather than recomputed on read; `totals` walks every row. */
+	readonly totals = $derived(totalRows(this.rows));
+
+	readonly #getBackend: () => Promise<GuestListBackend | null>;
+	#uid: string | null = null;
+
+	constructor(getBackend: () => Promise<GuestListBackend | null>) {
+		this.#getBackend = getBackend;
+	}
+
+	/** Which account the rows currently on screen belong to. */
+	get loadedFor(): string | null {
+		return this.#uid;
+	}
+
+	get isDenied(): boolean {
+		return this.phase === 'denied';
+	}
+
+	/**
+	 * Loads when the signed-in account changes, and does nothing when it has not.
+	 *
+	 * Called from an `$effect`, so it re-runs on every render. Without this guard
+	 * each state write would re-trigger the effect that caused it, and the guest
+	 * list would reload in a loop. Identity is the only thing worth reacting to —
+	 * the same person signing in twice does not need a second fetch.
+	 */
+	async sync(uid: string | null): Promise<void> {
+		if (uid === this.#uid) return;
+
+		this.#uid = uid;
+
+		if (!uid) {
+			this.clear();
+			return;
+		}
+
+		await this.load();
+	}
+
+	/**
+	 * Fetches, unconditionally.
+	 *
+	 * The retry path. Separate from `sync` because a denied load must not become
+	 * a retry loop, while an explicit "Check again" after a token refresh is
+	 * exactly the case where re-fetching is the whole point.
+	 */
+	async load(): Promise<void> {
+		if (!this.#uid) return;
+
+		this.phase = 'loading';
+		this.error = null;
+
+		try {
+			const backend = await this.#getBackend();
+
+			if (!backend) {
+				this.rows = [];
+				this.phase = 'unconfigured';
+				return;
+			}
+
+			this.rows = await backend.loadAll();
+			this.phase = 'ready';
+		} catch (error) {
+			// Clear rather than leave stale rows: this account is not entitled to
+			// them, and on a shared laptop the next person would see another
+			// household's dietary notes and messages.
+			this.rows = [];
+
+			if (error instanceof AdminDeniedError) {
+				this.phase = 'denied';
+				this.error = null;
+			} else {
+				this.phase = 'failed';
+				this.error = describeGuestError(error);
+			}
+		}
+	}
+
+	/** Called when the account signs out. Drops every row on screen. */
+	clear(): void {
+		this.rows = [];
+		this.phase = 'idle';
+		this.error = null;
+	}
+
+	/** For the page's "not on the admin list" wording. */
+	static readonly accessDenied = ACCESS_DENIED;
+}

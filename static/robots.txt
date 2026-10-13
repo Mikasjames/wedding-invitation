@@ -1,4 +1,8 @@
-# allow crawling everything except the internal specimen sheet
+# allow crawling everything except the internal specimen sheet and the private
+# RSVP dashboard. Neither of these is a control — GitHub Pages has no auth and
+# both pages are public URLs. /admin/ is kept out of search results so it does
+# not become a wayfinding hint for a page that exists to stay unremarkable.
 User-agent: *
 Disallow: /fonts/
+Disallow: /admin/
 
