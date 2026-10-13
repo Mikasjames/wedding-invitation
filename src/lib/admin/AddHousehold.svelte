@@ -2,10 +2,9 @@
 	import { base } from '$app/paths';
 	import { page } from '$app/state';
 	import type { GuestList } from './guests.svelte';
-	import type { NewHousehold } from './guests.driver';
+	import { type HouseholdProblems, validateHousehold } from './household-form';
 	import type { Side } from '$lib/rsvp/types';
 	import { invitationMessage } from '$lib/rsvp/message';
-	import { isValidEmail, isValidSeatCount } from '$lib/rsvp/guests';
 
 	interface Props {
 		list: GuestList;
@@ -23,59 +22,41 @@
 	];
 
 	let householdName = $state('');
-	let seats = $state('');
+
+	/**
+	 * A `<input type="number">` binds to a number, or `null` when the field is
+	 * empty — never the string `''` this started as. Typing a seat count turned
+	 * the value into a number, and the first `.trim()` on it threw.
+	 */
+	let seats = $state<number | null>(null);
+
 	let side = $state<Side>('both');
 	let email = $state('');
 	let notes = $state('');
 	let code = $state('');
 
-	/** Per-field messages, so the guest-facing copy stays with the input. */
-	let problems = $state<Record<string, string>>({});
+	/** Per-field messages, so the copy stays next to the input it belongs to. */
+	let problems = $state<HouseholdProblems>({});
 
 	let copied = $state(false);
 	let copiedError = $state(false);
 
-	/**
-	 * Validated with the same predicates `pnpm seed` uses.
-	 *
-	 * Not for tidiness: a household this form accepted but the seed would have
-	 * rejected is a household whose document shape the rest of the system has
-	 * never seen.
-	 */
-	function validate(): NewHousehold | null {
-		const found: Record<string, string> = {};
-
-		const name = householdName.trim();
-		if (!name) found.householdName = 'Give the household a name.';
-
-		const seatsNumber = Number(seats);
-		if (seats.trim() === '') found.seats = 'How many seats are reserved for them?';
-		else if (!isValidSeatCount(seatsNumber)) found.seats = 'A household needs at least one seat.';
-
-		const mail = email.trim();
-		if (mail && !isValidEmail(mail)) found.email = 'That does not look like an email address.';
-
-		problems = found;
-		if (Object.keys(found).length) return null;
-
-		return {
-			householdName: name,
-			side,
-			seatsAllocated: seatsNumber,
-			contactEmail: mail || null,
-			notes: notes.trim(),
-			// Blank means "generate one", which is almost always what is wanted.
-			...(code.trim() ? { code: code.trim().toUpperCase() } : {})
-		};
-	}
-
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
 
-		const household = validate();
-		if (!household) return;
+		// Validation lives in `household-form.ts`, not here. It was inline at first
+		// and nothing could test it, which is how a `.trim()` on a number survived
+		// review and reached a real submit.
+		const result = validateHousehold({ householdName, seats, side, email, notes, code });
 
-		const created = await list.create(household);
+		if (!result.ok) {
+			problems = result.problems;
+			return;
+		}
+
+		problems = {};
+
+		const created = await list.create(result.household);
 
 		if (created) {
 			copied = false;
@@ -87,7 +68,7 @@
 		list.lastCreated = null;
 		list.createError = null;
 		householdName = '';
-		seats = '';
+		seats = null;
 		side = 'both';
 		email = '';
 		notes = '';
@@ -281,8 +262,12 @@
 					placeholder="Leave blank and we will generate one"
 					autocapitalize="characters"
 					spellcheck="false"
+					aria-invalid={problems.code ? 'true' : undefined}
 					class="{FIELD} uppercase tracking-[0.2em]"
 				/>
+				{#if problems.code}
+					<span class="font-body text-[11px] text-oxblood">{problems.code}</span>
+				{/if}
 				<span class="font-body text-[11px] text-ink/50">
 					Only if a card is already printed with it. A code already in use is
 					refused rather than overwritten.
