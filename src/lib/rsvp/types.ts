@@ -10,6 +10,16 @@ import type { Timestamp } from 'firebase/firestore';
  * rules use `diff().affectedKeys().hasOnly(RESPONSE_FIELDS)` to say so. Adding
  * an `/admin` dashboard later means widening that one rule, not moving data.
  */
+/**
+ * Which side of the wedding a household belongs to.
+ *
+ * Declared once here rather than inlined at each use: `SeededFields`, the admin
+ * row, the totals breakdown and the CSV all key off the same three values, and a
+ * fourth side added in one place and not another would leave the dashboard
+ * quietly miscounting.
+ */
+export type Side = 'bride' | 'groom' | 'both';
+
 export interface SeededFields {
 	schemaVersion: number;
 
@@ -17,7 +27,7 @@ export interface SeededFields {
 	householdName: string;
 
 	/** Which side of the wedding this household belongs to. */
-	side: 'bride' | 'groom' | 'both';
+	side: Side;
 
 	/**
 	 * The couple's allotment. A guest may never change it — that is the whole

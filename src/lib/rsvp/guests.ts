@@ -2,6 +2,7 @@
 // `scripts/seed-rsvps.mjs`, which Node runs directly, and Node's ESM resolver
 // will not guess an extension. Vite and TypeScript both handle it either way.
 import { CODE_LENGTH, generateCode, normalizeCode } from './codes.ts';
+import type { Side } from './types.ts';
 
 /** One row of `data/guests.csv`, after validation. */
 export interface GuestSeed {
@@ -9,7 +10,7 @@ export interface GuestSeed {
 	line: number;
 	code: string;
 	householdName: string;
-	side: 'bride' | 'groom' | 'both';
+	side: Side;
 	seatsAllocated: number;
 	contactEmail: string | null;
 	notes: string;
@@ -171,9 +172,9 @@ export function validateGuests(rows: string[][]): {
 export function summarise(guests: GuestSeed[]): {
 	households: number;
 	seats: number;
-	bySide: Record<string, number>;
+	bySide: Record<Side, number>;
 } {
-	const bySide: Record<string, number> = { bride: 0, groom: 0, both: 0 };
+	const bySide: Record<Side, number> = { bride: 0, groom: 0, both: 0 };
 
 	for (const guest of guests) bySide[guest.side] += 1;
 
