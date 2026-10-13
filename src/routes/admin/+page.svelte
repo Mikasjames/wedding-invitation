@@ -1,12 +1,11 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import AdminPanel from '$lib/admin/AdminPanel.svelte';
 	import AdminStat from '$lib/admin/AdminStat.svelte';
 	import { AdminSession } from '$lib/admin/auth.svelte';
 	import { GuestList } from '$lib/admin/guests.svelte';
 	import { ACCESS_DENIED } from '$lib/admin/guests.driver';
-	import { isConfigured } from '$lib/firebase/app';
+	import { isAuthConfigured } from '$lib/firebase/app';
 	import { createAuthDriver } from '$lib/firebase/admin-auth.client';
 	import { getGuestListBackend } from '$lib/firebase/admin-guests.client';
 
@@ -16,7 +15,13 @@
 	const BUTTON_CLASS =
 		'rounded-full border border-gold/30 bg-plum px-6 py-3 font-body text-[11px] font-medium tracking-[0.28em] text-champagne uppercase transition hover:opacity-90';
 
-	const configured = isConfigured();
+	/**
+	 * `isAuthConfigured` rather than `isConfigured`: this page needs `authDomain`,
+	 * which Firestore does not. Checking only the Firestore values would let a
+	 * build with no auth domain through and fail silently at the sign-in button
+	 * instead of here.
+	 */
+	const configured = isAuthConfigured();
 
 	const auth = new AdminSession(createAuthDriver());
 	const guests = new GuestList(getGuestListBackend);
@@ -101,7 +106,9 @@
 				<p class="font-display text-lg text-ink/70">
 					This build has no Firebase configuration. Copy <code>.env.example</code> to
 					<code>.env</code> and fill in the web config for
-					<code>michalemuel-wedding</code>.
+					<code>michalemuel-wedding</code> — including
+					<code>PUBLIC_FIREBASE_AUTH_DOMAIN</code>, which this page needs and the
+					invitation does not.
 				</p>
 			</AdminPanel>
 		{:else if !auth.ready}

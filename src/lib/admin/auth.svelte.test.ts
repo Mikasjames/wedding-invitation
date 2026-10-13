@@ -217,6 +217,19 @@ describe('AdminSession.signIn', () => {
 
 		expect(session.error).toBeNull();
 	});
+
+	// Backing out of the Google window should leave the page as it was. Setting
+	// `error` to `''` did that too, but left a falsy string sitting in a field that
+	// is documented as "nothing to say" — and anything later reading `error`
+	// without checking for `''` would see a state nobody set.
+	it('leaves no message at all when the user dismisses the window', async () => {
+		const { driver, session } = setup();
+		driver.signInError = authError('auth/popup-closed-by-user');
+
+		await session.signIn();
+
+		expect(session.error).toBeNull();
+	});
 });
 
 describe('AdminSession.signOut', () => {
@@ -259,6 +272,23 @@ describe('AdminSession.refresh', () => {
 		await session.refresh();
 
 		expect(session.error).not.toBeNull();
+	});
+
+	// The fourth-admin path: a custom claim granted while they were signed in
+	// does not reach an already-issued token, so the rules keep refusing them
+	// until the token is discarded. The session does not decide that is enough —
+	// the page has to re-ask Firestore afterwards, because whether access was
+	// granted is the rules' answer, not the client's.
+	it('forces a token refresh and leaves the verdict to the caller', async () => {
+		const { driver, session } = setup();
+		driver.user = MICA;
+		session.start();
+
+		await session.refresh();
+
+		expect(driver.refreshCalls).toBe(1);
+		expect(session.error).toBeNull();
+		expect(session.signedIn).toBe(true);
 	});
 });
 

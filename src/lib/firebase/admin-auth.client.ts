@@ -1,5 +1,5 @@
 import type { Auth, User } from 'firebase/auth';
-import { getApp } from './app';
+import { getApp, isAuthConfigured } from './app';
 import type { AdminUser, AuthDriver } from '../admin/auth.driver';
 import { describeAuthError } from '../admin/auth.driver';
 
@@ -10,29 +10,43 @@ import { describeAuthError } from '../admin/auth.driver';
  * it anywhere, for the same reason `firebase.client.ts` does the same: the admin
  * route must not drag the Auth SDK into the bundle of a guest reading an
  * invitation.
+ *
+ * Note there is no `setPersistence` call, and that is a correction rather than an
+ * omission. `browserLocalPersistence` is already the web default, so the call
+ * bought nothing — and running it from `auth()`, which resolves on mount while a
+ * redirect result may still be in the URL, is a race against the very thing it
+ * was supposed to protect.
  */
 let instance: Promise<Auth> | null = null;
 
 function auth(): Promise<Auth> {
 	instance ??= (async () => {
 		const app = await getApp();
-		const { browserLocalPersistence, getAuth, setPersistence } = await import('firebase/auth');
+		const { getAuth } = await import('firebase/auth');
 
-		const created = getAuth(app);
-
-		// Explicit, though it is already the default for web. "Stay signed in"
-		// should be a decision rather than an accident, and a refusal is not fatal
-		// — the session simply will not outlive the tab.
-		try {
-			await setPersistence(created, browserLocalPersistence);
-		} catch {
-			// Third-party cookie blocking makes this throw on some browsers.
-		}
-
-		return created;
+		return getAuth(app);
 	})();
 
 	return instance;
+}
+
+/**
+ * Logs every failure with its raw Firebase code before anything turns it into
+ * friendly copy.
+ *
+ * Present because of how long a silent failure here cost: `describeAuthError`
+ * collapses anything unmapped to "Sign-in failed. Please try again.", and without
+ * this on the console every diagnosis had to be inferred from network traffic.
+ * The code is the fact; the sentence is the translation.
+ */
+function report(operation: string, error: unknown): unknown {
+	console.error(
+		`[admin-auth] ${operation} failed:`,
+		(error as { code?: string } | null)?.code ?? '(no code)',
+		error
+	);
+
+	return error;
 }
 
 function toAdminUser(user: User | null): AdminUser | null {
@@ -41,9 +55,20 @@ function toAdminUser(user: User | null): AdminUser | null {
 	return { uid: user.uid, email: user.email, displayName: user.displayName };
 }
 
+/** Errors that mean "the popup path is unusable, use a redirect instead". */
+const FALL_BACK_TO_REDIRECT = new Set(['auth/popup-redirect-fallback', 'auth/popup-blocked']);
+
 export function createAuthDriver(): AuthDriver {
 	return {
 		subscribe(onChange) {
+			// Nothing to listen to. Report signed-out rather than throwing inside the
+			// async IIFE below, where it would surface as an unhandled rejection
+			// instead of a page that can explain itself.
+			if (!isAuthConfigured()) {
+				onChange(null);
+				return () => {};
+			}
+
 			// `onAuthStateChanged` needs the instance, which needs an await, so the
 			// listener cannot be attached synchronously — but the caller expects a
 			// detach function right now. These two flags cover the window where the
@@ -70,36 +95,94 @@ export function createAuthDriver(): AuthDriver {
 		async resume() {
 			const { getRedirectResult } = await import('firebase/auth');
 
-			// Resolves to null when nothing is pending, which is the common case.
-			// Throws when a redirect was abandoned or failed, which `describe()`
-			// turns into something the page can show.
+			// Only the redirect fallback leaves a result pending. Resolves to null
+			// otherwise, which is the common case.
 			await getRedirectResult(await auth());
 		},
 
+		/**
+		 * Popup first, redirect as a fallback.
+		 *
+		 * Popup is the default because the redirect flow's last hop hands the
+		 * credential back across an origin boundary, which depends on storage on the
+		 * auth domain surviving the trip. Browsers block that under their
+		 * cross-site cookie restrictions. A popup transfers the result to the opener
+		 * with `postMessage` and does not depend on it.
+		 *
+		 * Redirect is kept as the fallback rather than dropped, because popups are
+		 * the flakier of the two on iOS Safari — which matters when the couple opens
+		 * this on a phone. Both `popup-redirect-fallback` (the SDK asking us to
+		 * switch) and `popup-blocked` (the user blocked it) route there.
+		 */
 		async signIn() {
-			const { GoogleAuthProvider, signInWithRedirect } = await import('firebase/auth');
+			const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } =
+				await import('firebase/auth');
 
-			// Redirect rather than popup. A popup needs manual
-			// `auth/popup-redirect-fallback` wiring that shifts between SDK
-			// versions, and it breaks outright where third-party cookies are blocked
-			// — which, for an admin page used by two or three people on desktop,
-			// buys nothing in exchange for a class of failure that is annoying to
-			// diagnose and impossible to reproduce locally.
-			await signInWithRedirect(await auth(), new GoogleAuthProvider());
+			const provider = new GoogleAuthProvider();
+			const instance = await auth();
+
+			try {
+				await signInWithPopup(instance, provider);
+			} catch (error) {
+				const code = (error as { code?: string } | null)?.code ?? '';
+
+				if (!FALL_BACK_TO_REDIRECT.has(code)) {
+					throw report('signIn', error);
+				}
+
+				console.warn(`[admin-auth] ${code} — falling back to a redirect`);
+
+				try {
+					await signInWithRedirect(instance, provider);
+				} catch (fallbackError) {
+					throw report('signIn (redirect fallback)', fallbackError);
+				}
+			}
 		},
 
 		async signOut() {
 			const { signOut } = await import('firebase/auth');
-			await signOut(await auth());
+
+			try {
+				await signOut(await auth());
+			} catch (error) {
+				throw report('signOut', error);
+			}
 		},
 
 		async refresh() {
 			// `true` forces the network round trip. Without it a freshly granted
 			// custom claim stays invisible and the dashboard keeps refusing someone
 			// who has, in fact, been made an admin.
-			await (await auth()).currentUser?.getIdToken(true);
+			try {
+				await (await auth()).currentUser?.getIdToken(true);
+			} catch (error) {
+				throw report('refresh', error);
+			}
 		},
 
-		describe: describeAuthError
+		describe(error: unknown): string {
+			const described = describeAuthError(error);
+
+			if (!described) return '';
+
+			// Unmapped codes are worth seeing even when the message is generic.
+			const code = (error as { code?: string } | null)?.code ?? '';
+			if (code && !MAPPED_CODES.has(code)) console.warn(`[admin-auth] unmapped code:`, code);
+
+			return described;
+		}
 	};
 }
+
+/** Codes `describeAuthError` has something specific to say about. */
+const MAPPED_CODES = new Set([
+	'auth/unauthorized-domain',
+	'auth/operation-not-allowed',
+	'auth/network-request-failed',
+	'auth/too-many-requests',
+	'auth/popup-blocked',
+	'auth/cancelled-popup-request',
+	'auth/user-cancelled',
+	'auth/popup-closed-by-user'
+]);

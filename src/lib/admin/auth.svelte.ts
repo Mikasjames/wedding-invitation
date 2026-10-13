@@ -148,8 +148,10 @@ export class AdminSession {
 	 *
 	 * Closing the Google window or backing out of the redirect should leave the
 	 * page exactly as it was, not wearing an error about something nobody did wrong.
+	 * `null` rather than `''`, so `error` stays honestly "nothing to say" instead
+	 * of holding a falsy string that later reads as a state nobody set.
 	 */
-	#describe(error: unknown): string {
-		return this.#driver.describe(error) || '';
+	#describe(error: unknown): string | null {
+		return this.#driver.describe(error) || null;
 	}
 }

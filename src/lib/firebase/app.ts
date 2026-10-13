@@ -39,14 +39,25 @@ const config = {
 };
 
 /**
- * Whether there is enough configuration to talk to Firebase at all.
+ * Whether there is enough configuration to talk to Firestore at all.
  *
- * Requires what Firestore needs (`apiKey`, `projectId`, `appId`). Auth additionally
- * needs `authDomain`, which is part of the same console block, so a config that
- * passes this check is one Auth will accept.
+ * Requires `apiKey`, `projectId`, `appId` — everything `getFirestore` needs. Auth
+ * needs one more; see `isAuthConfigured`.
  */
 export function isConfigured(): boolean {
 	return Boolean(config.apiKey && config.projectId && config.appId);
+}
+
+/**
+ * Whether Auth can work.
+ *
+ * Auth additionally needs `authDomain`, and Firestore does not. Keeping the two
+ * apart matters because the guest RSVP flow is legitimate on a build with no
+ * Auth at all, and gating it on a value it never reads would break the invitation
+ * over a missing dashboard setting.
+ */
+export function isAuthConfigured(): boolean {
+	return isConfigured() && Boolean(config.authDomain);
 }
 
 export class FirebaseNotConfiguredError extends Error {
