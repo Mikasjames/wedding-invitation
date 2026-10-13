@@ -40,15 +40,30 @@ gcloud auth application-default login
 Keep the key out of the repo — `.gitignore` covers the usual names, and
 `data/` and `out/` are ignored entirely.
 
-## 3. Deploy the rules first
+## 3. Set the rules, before the first seed
 
-```sh
-firebase deploy --only firestore:rules
-```
+**The ruleset lives in the Firebase console, not in this repo.** Console →
+Firestore → Rules. This is deliberate, and `firestore.rules` was deleted rather
+than deprecated.
 
 Seeding into a database whose rules are the permissive Firestore-console default
-means every guest document is world-readable until the real rules land. Deploy
-the rules before the first seed, not after.
+means every guest document is world-readable until the real rules land. Set the
+rules before the first seed, not after.
+
+### Do not deploy rules from here
+
+There is no `firebase.json` and no rules file in this repository, and adding one
+back would be a trap. The deployed ruleset contains an **admin branch** — the
+`list` grant that lets the dashboard read the collection — and that branch exists
+*only in the console*. Nobody has a copy of it outside Firebase.
+
+So any file reconstructed here would be a guest-only ruleset. Deploying it would
+replace the live ruleset with something narrower and lock the couple out of their
+own guest list, with no obvious error to point at.
+
+If the ruleset ever needs to change, change it in the console and read it back to
+check what you are looking at. If it genuinely needs to be version-controlled,
+that is a decision to make on purpose, not a side effect of adding a file.
 
 ## 4. Run it
 

@@ -9,7 +9,6 @@ on:
   push:
     branches:
       - main
-
   # Lets you re-run a deploy from the Actions tab without a dummy commit.
   workflow_dispatch:
 
@@ -49,7 +48,8 @@ jobs:
         # and renders "RSVPs are not open just yet" instead of failing the build.
         #
         # The values are public by design (they ship inside every client bundle
-        # and are protected by firestore.rules), so this is hygiene, not secrecy.
+        # and are protected by the deployed Firestore ruleset), so this is
+        # hygiene, not secrecy.
         env:
           PUBLIC_FIREBASE_API_KEY: ${{ secrets.PUBLIC_FIREBASE_API_KEY }}
           PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.PUBLIC_FIREBASE_AUTH_DOMAIN }}

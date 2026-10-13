@@ -96,8 +96,9 @@ dressCode: {
 		 * `wedding.test.ts` because this value has been *after* the ceremony
 		 * before.
 		 *
-		 * MUST match the `isBeforeCutoff()` timestamp in `firestore.rules` — the
-		 * rules cannot read this file, so nothing keeps the two in step except
+		 * MUST match the `isBeforeCutoff()` timestamp in the deployed ruleset,
+		 * which lives in the Firebase console and not in this repo — so there is
+		 * no file here to diff against, and nothing keeps the two in step except
 		 * whoever changes them. Confirm the real cutoff with the couple.
 		 */
 		deadline: '15 January 2027',

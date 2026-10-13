@@ -81,7 +81,7 @@ export async function getBackend(): Promise<RsvpBackend | null> {
 
 			try {
 				// `doc()`, never `where(documentId(), '==', ...)`: the second is a
-				// `list` operation and `firestore.rules` denies those.
+				// `list` operation and the deployed ruleset denies those.
 				const snapshot = await firestore.getDoc(firestore.doc(db, 'rsvps', code));
 
 				return snapshot.exists() ? readRsvp(snapshot.data()) : null;

@@ -4,7 +4,7 @@ import type { Timestamp } from 'firebase/firestore';
  * One document per invited household, at `rsvps/{code}`.
  *
  * The split between the two interfaces below is not cosmetic — it is the
- * guest/owner boundary that `firestore.rules` enforces. `SeededFields` is
+ * guest/owner boundary that the deployed ruleset enforces. `SeededFields` is
  * written by the seed script and, later, by an authenticated admin.
  * `ResponseFields` is the complete set of keys a guest may change, and the
  * rules use `diff().affectedKeys().hasOnly(RESPONSE_FIELDS)` to say so. Adding
@@ -75,9 +75,10 @@ export type Rsvp = SeededFields & ResponseFields;
 export type RsvpStatus = 'pending' | 'attending' | 'declined';
 
 /**
- * The guest-writable field set. Mirrors `onlyResponseFieldsChanged()` in
- * `firestore.rules` — change one and you must change the other, which is why
- * the rules file repeats the list literally rather than importing this.
+ * The guest-writable field set. Mirrors `onlyResponseFieldsChanged()` in the
+ * deployed ruleset — change one and you must change the other. The rules
+ * cannot import this, so the list is written out literally on the console side,
+ * and nothing in git compares the two.
  */
 export const RESPONSE_FIELDS = [
 	'status',

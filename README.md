@@ -54,7 +54,7 @@ Guests look themselves up by a 10-character code rather than by name — the cod
 
 That one decision carries the whole design. Because the code *is* the capability:
 
-- `firestore.rules` denies `list`, so the guest list cannot be scraped.
+- The deployed ruleset denies `list`, so the guest list cannot be scraped.
 - 10 characters of Crockford base32 is ~1.1e15 combinations, so guessing one is not practical.
 - A guest cannot write past the seats the couple allotted them, because the rules refuse it — the stepper in the UI is a courtesy, not the guarantee.
 - Name search, and with it the entire `Ma. Cristina` / `Maria Cristina` problem, does not exist.
@@ -63,11 +63,30 @@ Firestore rules are the security boundary; the client never sees the collection.
 
 | File | What it is |
 |---|---|
-| `firestore.rules` | The whole security model. Read the comments before editing. |
 | `src/lib/rsvp/codes.ts` | Code generation and normalisation. The length is a security parameter. |
 | `src/lib/rsvp/rsvp.svelte.ts` | The flow, as state. No Firestore import, so it is testable without a network. |
 | `src/lib/rsvp/firebase.client.ts` | The only file that touches Firestore, loaded lazily. |
 | `scripts/seed-rsvps.mjs` | Seeds the guest list. See `scripts/README.md`. |
+
+### Firestore rules live in the console
+
+There is no rules file in this repo. The deployed ruleset is edited in Firebase
+console → Firestore → Rules, and `firestore.rules` was deleted rather than
+deprecated — see `scripts/README.md` for why reconstructing one would be worse
+than having none.
+
+Two consequences worth knowing before you change anything:
+
+- **Nothing in git enforces the seat cap.** It is verified by reading the console
+  rules and by one manual end-to-end RSVP. There are deliberately no Firestore
+  emulator tests, because `@firebase/rules-unit-testing` loads rules from a file
+  and there is no file. If the ruleset ever needs automated coverage, exporting it
+  here is the first step — and that is a decision, not a cleanup.
+- **The admin branch has no copy outside Firebase.** It is the `list` grant that
+  lets `/admin` read the collection, and every one of the couple's addresses is
+  admitted by email rather than by claim, so none of them carries an admin claim
+  in their token. The client deliberately never checks a claim — authorisation
+  arrives as a `PERMISSION_DENIED` on the collection load.
 
 Seeding the guest list, generating the codes, and producing the messages to send:
 
@@ -76,10 +95,13 @@ pnpm seed --dry-run
 pnpm seed
 ```
 
-Two things to keep in step by hand, because nothing enforces it:
+Two things to keep in step by hand, because nothing enforces it — the rules
+cannot read the config file, and the config file cannot read the rules:
 
-- `wedding.rsvp.deadline` in `src/lib/lib/wedding.ts` and the `isBeforeCutoff()` timestamp in `firestore.rules` must be the same date. The rules cannot read the config file.
-- `RESPONSE_FIELDS` in `src/lib/rsvp/types.ts` and `onlyResponseFieldsChanged()` in `firestore.rules` must list the same keys.
+- `wedding.rsvp.deadline` in `src/lib/lib/wedding.ts` and the `isBeforeCutoff()`
+  timestamp in the deployed ruleset must be the same date.
+- `RESPONSE_FIELDS` in `src/lib/rsvp/types.ts` and `onlyResponseFieldsChanged()`
+  in the deployed ruleset must list the same keys.
 
 ## Editing the invitation
 
