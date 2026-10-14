@@ -4,6 +4,7 @@
 	import AdminPanel from '$lib/admin/AdminPanel.svelte';
 	import AdminStat from '$lib/admin/AdminStat.svelte';
 	import HouseholdBadges from '$lib/admin/HouseholdBadges.svelte';
+	import HouseholdCard from '$lib/admin/HouseholdCard.svelte';
 	import HouseholdDetail from '$lib/admin/HouseholdDetail.svelte';
 	import { AdminSession } from '$lib/admin/auth.svelte';
 	import { GuestList } from '$lib/admin/guests.svelte';
@@ -100,8 +101,8 @@
 	 *
 	 * A single code rather than a `Set`. The detail is a full-width panel, two of
 	 * them open at once is a page of noise, and one at a time is the only shape
-	 * that still means something after a refresh — which is why the page owns this
-	 * rather than each row keeping its own flag.
+	 * that still means something after a refresh or a rotation — which is why the
+	 * page owns this rather than each row keeping its own flag.
 	 */
 	let expandedCode = $state<string | null>(null);
 
@@ -275,77 +276,114 @@
 				</div>
 			{/if}
 
-			<div class="overflow-x-auto rounded-2xl border border-gold/20">
-				<table class="w-full min-w-[42rem] border-collapse text-left">
-					<caption class="sr-only">
-						Every household on the guest list. Select a household's name to see who is
-						attending, any message left for the couple, and the invitation link.
-					</caption>
-					<thead>
-						<tr class="border-b border-gold/20">
-							{#each COLUMNS as column (column.label)}
-								<th
-									scope="col"
-									class="px-4 py-3 font-body text-[10px] font-medium tracking-[0.28em] text-gold-deep uppercase
-										{column.align === 'right' ? 'text-right' : ''}"
-								>
-									{column.label}
-								</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody>
-						<!--
-							A row and its detail are both emitted per household rather than
-							split into two loops, so the detail cannot drift out of sync with
-							the row above it. `border-b-0` while open keeps the pair joined
-							instead of drawing a line through the middle of one household.
-						-->
-						{#each guests.rows as household (household.code)}
-							{@const open = expandedCode === household.code}
-							<tr
-								class="border-b border-gold/10 {open
-									? 'border-b-0'
-									: 'last:border-0'} {household.active ? '' : 'opacity-50'}"
-							>
-								<td class="px-4 py-3 font-body text-sm text-ink">
-									<button
-										type="button"
-										onclick={() => toggle(household.code)}
-										aria-expanded={open}
-										aria-controls="detail-{household.code}"
-										class="text-left underline-offset-4 hover:underline"
-									>
-										{household.householdName}
-									</button>
-									<HouseholdBadges {household} />
-								</td>
-								<td class="px-4 py-3 font-body text-xs tracking-[0.16em] text-ink/60">
-									{household.code}
-								</td>
-								<td class="px-4 py-3 font-body text-xs text-ink/60 capitalize">{household.side}</td>
-								<td class="px-4 py-3 text-right font-body text-sm text-ink">
-									{household.seatsAllocated}
-								</td>
-								<td class="px-4 py-3 text-right font-body text-sm text-ink">
-									{household.partySize}
-								</td>
-								<td class="px-4 py-3 font-body text-xs text-ink/60 capitalize">
-									{household.status}
-								</td>
-							</tr>
+			<!--
+				Two renderings of the same rows, split at `sm`.
 
-							{#if open}
-								<tr id="detail-{household.code}" class="last:border-0">
-									<td colspan={COLUMNS.length} class="px-0 pb-4">
-										<HouseholdDetail {household} />
+				`AddHousehold` says outright that it is built for a phone — "we
+				forgot Auntie" is typed from a phone — while the table beside it was
+				`min-w-[42rem]` of sideways scroll, and gets wider as detail is added
+				to it. A couple who adds a household from the sofa and then has to
+				scroll sideways to read what they just added has it backwards.
+
+				Both are always in the DOM and one is hidden by CSS, so their
+				element ids are prefixed apart — `card-detail-` and `detail-` — or
+				`aria-controls` would point at one of two elements sharing an id.
+			-->
+			<!--
+				An empty table is a worse answer than a sentence. Every sign-in that
+				can read the collection and finds nothing is a real state — a
+				project seeded and then emptied, or the wrong database — and the
+				dashboard should say so rather than presenting six zeroes and a
+				header.
+			-->
+			{#if guests.rows.length === 0}
+				<p class="rounded-2xl border border-gold/20 px-5 py-8 text-center font-display text-lg text-ink/50">
+					No households on the list yet. Add one above, or seed the list from a
+					spreadsheet.
+				</p>
+			{:else}
+				<ul class="divide-y divide-gold/10 rounded-2xl border border-gold/20 sm:hidden">
+					{#each guests.rows as household (household.code)}
+						<HouseholdCard
+							{household}
+							expanded={expandedCode === household.code}
+							ontoggle={() => toggle(household.code)}
+						/>
+					{/each}
+				</ul>
+
+				<div class="hidden overflow-x-auto rounded-2xl border border-gold/20 sm:block">
+					<table class="w-full min-w-[42rem] border-collapse text-left">
+						<caption class="sr-only">
+							Every household on the guest list. Select a household's name to see who is
+							attending, any message left for the couple, and the invitation link.
+						</caption>
+						<thead>
+							<tr class="border-b border-gold/20">
+								{#each COLUMNS as column (column.label)}
+									<th
+										scope="col"
+										class="px-4 py-3 font-body text-[10px] font-medium tracking-[0.28em] text-gold-deep uppercase
+											{column.align === 'right' ? 'text-right' : ''}"
+									>
+										{column.label}
+									</th>
+								{/each}
+							</tr>
+						</thead>
+						<tbody>
+							<!--
+								A row and its detail are both emitted per household rather than
+								split into two loops, so the detail cannot drift out of sync with
+								the row above it. `border-b-0` while open keeps the pair joined
+								instead of drawing a line through the middle of one household.
+							-->
+							{#each guests.rows as household (household.code)}
+								{@const open = expandedCode === household.code}
+								<tr
+									class="border-b border-gold/10 {open
+										? 'border-b-0'
+										: 'last:border-0'} {household.active ? '' : 'opacity-50'}"
+								>
+									<td class="px-4 py-3 font-body text-sm text-ink">
+										<button
+											type="button"
+											onclick={() => toggle(household.code)}
+											aria-expanded={open}
+											aria-controls="detail-{household.code}"
+											class="text-left underline-offset-4 hover:underline"
+										>
+											{household.householdName}
+										</button>
+										<HouseholdBadges {household} />
+									</td>
+									<td class="px-4 py-3 font-body text-xs tracking-[0.16em] text-ink/60">
+										{household.code}
+									</td>
+									<td class="px-4 py-3 font-body text-xs text-ink/60 capitalize">{household.side}</td>
+									<td class="px-4 py-3 text-right font-body text-sm text-ink">
+										{household.seatsAllocated}
+									</td>
+									<td class="px-4 py-3 text-right font-body text-sm text-ink">
+										{household.partySize}
+									</td>
+									<td class="px-4 py-3 font-body text-xs text-ink/60 capitalize">
+										{household.status}
 									</td>
 								</tr>
-							{/if}
-						{/each}
-					</tbody>
-				</table>
-			</div>
+
+								{#if open}
+									<tr id="detail-{household.code}" class="last:border-0">
+										<td colspan={COLUMNS.length} class="px-0 pb-4">
+											<HouseholdDetail {household} />
+										</td>
+									</tr>
+								{/if}
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
 		{/if}
 
 		<noscript>
