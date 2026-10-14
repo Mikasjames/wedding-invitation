@@ -201,16 +201,39 @@ export class RsvpFlow {
 			? Math.max(1, Math.min(household.partySize, household.seatsAllocated))
 			: Math.max(1, household.seatsAllocated);
 		this.attendeeNames = [...household.attendeeNames];
+
+		// Names follow the party here as well as in `setPartySize`. Without this, a
+		// household that has not answered yet keeps the empty `attendeeNames` the
+		// seed wrote, so the names list renders nothing at all — it only appears once
+		// the guest touches the stepper, which is the one interaction that was
+		// supposed to be optional. An attending household reopening the form is
+		// handled by the same call: `slice` keeps what they typed, and only the
+		// shortfall is padded.
+		this.#resizeNames(this.partySize);
+
 		this.message = household.message;
 	}
 
 	setIntent(intent: Intent): void {
 		this.intent = intent;
-		// Declining is not "one guest who happens not to come" — it is nobody. The
-		// rules enforce the same thing, so the stepper should not offer a number
-		// that would be refused.
-		if (intent === 'declined') this.partySize = 0;
-		else if (this.partySize === 0) this.partySize = 1;
+
+		if (intent === 'declined') {
+			// Declining is not "one guest who happens not to come" — it is nobody. The
+			// rules enforce the same thing, so the stepper should not offer a number
+			// that would be refused.
+			this.partySize = 0;
+
+			return;
+		}
+
+		// Back from declining, which set the party to nobody.
+		if (this.partySize === 0) this.partySize = 1;
+
+		// Otherwise accepting straight after declining leaves a list of name lines
+		// longer than the party it belongs to — four empty inputs against one seat.
+		// The rules do not check the name count against `partySize`, so that would be
+		// stored as four names for a single head and shown as such on the dashboard.
+		this.#resizeNames(this.partySize);
 	}
 
 	/** Clamped, because a stepper is only a courtesy and the rules are the guard. */

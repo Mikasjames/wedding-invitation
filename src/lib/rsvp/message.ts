@@ -81,6 +81,11 @@ export function invitationMessage({ household, seats, code, site, custom }: Invi
 		deadline: wedding.rsvp.deadline,
 		code,
 		link: invitationLink(site, code),
+		weddingDate: wedding.dateLabel,
+		weddingCeremonyTime: wedding.events[0].time,
+		weddingReceptionTime: wedding.events[1].time,
+		weddingCeremony: wedding.ceremony.venue,
+		weddingReception: wedding.reception.venue,
 
 		// Carries its own noun so the copy reads "2 seats" and "1 seat" without the
 		// plural having to live in a template the couple is editing.

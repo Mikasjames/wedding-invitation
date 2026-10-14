@@ -58,7 +58,7 @@ export const wedding = {
 
 	ceremony: {
 		name: 'The Ceremony',
-		venue: 'To be announced',
+		venue: 'Kingdom Hall of Jehovah\'s Witnesses, Tanza, Cavite, Philippines',
 		address: 'Tanza, Cavite, Philippines'
 	},
 

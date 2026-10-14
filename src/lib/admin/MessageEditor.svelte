@@ -56,7 +56,12 @@
 		'{deadline}',
 		'{link}',
 		'{code}',
-		'{seats}'
+		'{seats}',
+		'{weddingDate}',
+		'{weddingCeremony}',
+		'{weddingReception}',
+		'{weddingCeremonyTime}',
+		'{weddingReceptionTime}'
 	];
 
 	const remaining = $derived(MAX_CUSTOM_MESSAGE - draft.length);

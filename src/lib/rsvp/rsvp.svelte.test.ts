@@ -234,6 +234,68 @@ describe('RsvpFlow party size', () => {
 		expect(h.flow.attendeeNames).toHaveLength(4);
 	});
 
+	// The regression. The names list rendered nothing on arrival and only filled
+	// in once the stepper was touched, because `#adopt` set `partySize` without
+	// calling `#resizeNames` — so a household that had not answered yet kept the
+	// empty `attendeeNames` the seed wrote. The stepper became a required
+	// interaction rather than an optional one.
+	//
+	// The test above could not have caught it: it calls `setPartySize` first, which
+	// was the only path that already worked.
+	it('has a name line for every seat the moment the household is found', async () => {
+		const h = setup();
+		await h.flow.lookup(CODE);
+
+		expect(h.flow.attendeeNames).toHaveLength(h.flow.partySize);
+		expect(h.flow.attendeeNames).toHaveLength(4);
+	});
+
+	// Padded rather than replaced, so reopening the form keeps what they typed.
+	it('keeps the names it already has and pads the rest', async () => {
+		const h = setup({
+			document: household({
+				status: 'attending',
+				partySize: 4,
+				attendeeNames: ['Juan', 'Maria Cristina']
+			})
+		});
+
+		await h.flow.lookup(CODE);
+
+		expect(h.flow.attendeeNames).toEqual(['Juan', 'Maria Cristina', '', '']);
+	});
+
+	// The other direction. More names than seats is the invariant too, and it is
+	// how a guest ends up storing four names for one head.
+	it('drops names beyond the party rather than asking for them', async () => {
+		const h = setup({
+			document: household({
+				status: 'attending',
+				partySize: 2,
+				attendeeNames: ['Juan', 'Maria Cristina', 'Ana']
+			})
+		});
+
+		await h.flow.lookup(CODE);
+
+		expect(h.flow.attendeeNames).toEqual(['Juan', 'Maria Cristina']);
+	});
+
+	// Declining sets the party to nobody; accepting puts it back to one. Without
+	// the resize the list stayed at its old length, and the rules never check the
+	// name count against `partySize` — so four names would be stored against one
+	// seat and appear that way on the dashboard.
+	it('does not leave more name lines than seats after declining then accepting', async () => {
+		const h = setup();
+		await h.flow.lookup(CODE);
+
+		h.flow.setIntent('declined');
+		h.flow.setIntent('attending');
+
+		expect(h.flow.partySize).toBe(1);
+		expect(h.flow.attendeeNames).toHaveLength(1);
+	});
+
 	// A household allotted zero seats cannot be confirmed as attending: the rules
 	// require at least one seat to attend and refuse anything above the allotment,
 	// so offering the choice would only produce an error the guest cannot fix.
