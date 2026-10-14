@@ -6,6 +6,7 @@ import {
 	AdminDeniedError,
 	AdminFailedError,
 	AdminOfflineError,
+	AdminWriteRefusedError,
 	classifyGuestError,
 	describeGuestError,
 	type GuestListBackend
@@ -40,7 +41,8 @@ function backend(options: { rows?: AdminRow[]; throws?: Error } = {}): GuestList
 			code: household.code ?? 'NEW0000001',
 			householdName: household.householdName,
 			seatsAllocated: household.seatsAllocated
-		})
+		}),
+		setMessage: async () => {}
 	};
 }
 
@@ -52,10 +54,15 @@ function setup(resolved: GuestListBackend | null = backend()) {
 		})) as GuestListBackend['create']
 	);
 
+	const setMessage = vi.fn(
+		(resolved?.setMessage ?? (async () => {})) as GuestListBackend['setMessage']
+	);
+
 	return {
 		loadAll,
 		create,
-		list: new GuestList(async () => (resolved ? { loadAll, create } : null))
+		setMessage,
+		list: new GuestList(async () => (resolved ? { loadAll, create, setMessage } : null))
 	};
 }
 
@@ -251,7 +258,8 @@ describe('GuestList failures', () => {
 			},
 			create: async () => {
 				throw new AdminDeniedError();
-			}
+			},
+			setMessage: async () => {}
 		}));
 		await denied.sync('user-2');
 
@@ -290,7 +298,8 @@ describe('GuestList.reload', () => {
 			},
 			create: async () => {
 				throw new AdminOfflineError();
-			}
+			},
+			setMessage: async () => {}
 		}));
 
 		await failing.sync('user-1');
@@ -366,7 +375,8 @@ describe('GuestList.create', () => {
 				code: 'NEW0000001',
 				householdName: 'Reyes',
 				seatsAllocated: 6
-			})
+			}),
+			setMessage: async () => {}
 		}));
 		await flaky.sync('user-1');
 		expect(flaky.phase).toBe('ready');
@@ -395,7 +405,8 @@ describe('GuestList.create', () => {
 				code: 'NEW0000001',
 				householdName: 'Reyes',
 				seatsAllocated: 6
-			})
+			}),
+			setMessage: async () => {}
 		}));
 		await flaky.sync('user-1');
 
@@ -418,7 +429,8 @@ describe('GuestList.create', () => {
 			},
 			create: async () => {
 				throw new AdminOfflineError();
-			}
+			},
+			setMessage: async () => {}
 		}));
 		await failing.sync('user-1');
 
@@ -449,7 +461,8 @@ describe('GuestList.create', () => {
 			loadAll: async () => ROWS,
 			create: async () => {
 				throw new AdminDeniedError();
-			}
+			},
+			setMessage: async () => {}
 		}));
 		await denied.sync('user-1');
 
@@ -466,7 +479,8 @@ describe('GuestList.create', () => {
 			loadAll: async () => ROWS,
 			create: async () => {
 				throw new AdminCodeTakenError('W8K9JPTR4M');
-			}
+			},
+			setMessage: async () => {}
 		}));
 		await taken.sync('user-1');
 
@@ -483,7 +497,8 @@ describe('GuestList.create', () => {
 			create: async () => {
 				if (fail) throw new AdminOfflineError();
 				return { code: 'NEW0000001', householdName: 'A', seatsAllocated: 2 };
-			}
+			},
+			setMessage: async () => {}
 		}));
 		await flaky.sync('user-1');
 
@@ -507,7 +522,8 @@ describe('GuestList.create', () => {
 			create: async () => {
 				await held;
 				return { code: 'NEW0000001', householdName: 'A', seatsAllocated: 2 };
-			}
+			},
+			setMessage: async () => {}
 		}));
 		await slow.sync('user-1');
 
@@ -564,5 +580,96 @@ describe('GuestList totals', () => {
 
 		expect(list.totals.invited).toBe(0);
 		expect(list.totals.confirmed).toBe(0);
+	});
+});
+describe('GuestList.setMessage', () => {
+	// The property the whole method rests on: only the wording moves. A backend
+	// that could also write `seatsAllocated` could produce the over-committed
+	// document that locks a household out of its own RSVP, which is why the
+	// interface takes one field rather than a patch object.
+	it('writes the code and the wording, and nothing else', async () => {
+		const { list, setMessage } = setup();
+
+		await list.sync('user-1');
+		await list.setMessage('BBBB00000001', 'It has been years.');
+
+		expect(setMessage).toHaveBeenCalledWith('BBBB00000001', 'It has been years.');
+	});
+
+	// An emptied editor is how a household goes back to the shared template.
+	it('stores an empty string as the way back to the template', async () => {
+		const { list, setMessage } = setup();
+
+		await list.sync('user-1');
+		await list.setMessage('BBBB00000001', '');
+
+		expect(setMessage).toHaveBeenCalledWith('BBBB00000001', '');
+	});
+
+	// Re-read rather than patch the row, because the write set `updatedAt` and a
+	// local edit would leave the detail panel showing the old "Last change".
+	it('re-reads the list so the timestamps are not stale', async () => {
+		const { list, loadAll } = setup();
+
+		await list.sync('user-1');
+		expect(loadAll).toHaveBeenCalledTimes(1);
+
+		await list.setMessage('BBBB00000001', 'Do come.');
+
+		expect(loadAll).toHaveBeenCalledTimes(2);
+	});
+
+	it('reports success', async () => {
+		const { list } = setup();
+
+		await list.sync('user-1');
+
+		expect(await list.setMessage('BBBB00000001', 'Do come.')).toBe(true);
+		expect(list.messageError).toBeNull();
+	});
+
+	// The failure this most likely hits: the deployed ruleset has an admin read
+	// branch and no admin write branch, so `permission-denied` arrives from an
+	// account that can plainly read the list.
+	it('explains a refused write without demoting the list', async () => {
+		const { list } = setup({
+			...backend(),
+			setMessage: async () => {
+				throw new AdminWriteRefusedError();
+			}
+		});
+
+		await list.sync('user-1');
+		const before = list.rows;
+
+		expect(await list.setMessage('BBBB00000001', 'Do come.')).toBe(false);
+		expect(list.messageError).toContain('Firebase console');
+		// The rows and the phase are untouched: a refused write says nothing about
+		// whether the guest list still loads.
+		expect(list.phase).toBe('ready');
+		expect(list.rows).toBe(before);
+	});
+
+	// Checked before the first await, or two rapid saves both pass the guard.
+	it('refuses a second save while one is in flight', async () => {
+		const { list, setMessage } = setup();
+
+		await list.sync('user-1');
+
+		const first = list.setMessage('BBBB00000001', 'Do come.');
+		const second = await list.setMessage('BBBB00000001', 'Do come again.');
+
+		expect(second).toBe(false);
+		expect(setMessage).toHaveBeenCalledTimes(1);
+
+		await first;
+	});
+
+	it('says so when there is no backend at all', async () => {
+		const { list } = setup(null);
+		await list.sync('user-1');
+
+		expect(await list.setMessage('BBBB00000001', 'Do come.')).toBe(false);
+		expect(list.messageError).toContain('not configured');
 	});
 });

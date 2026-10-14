@@ -401,6 +401,7 @@
 					{#each guests.rows as household (household.code)}
 						<HouseholdCard
 							{household}
+							list={guests}
 							expanded={expandedCode === household.code}
 							ontoggle={() => toggle(household.code)}
 						/>
@@ -470,7 +471,7 @@
 								{#if open}
 									<tr id="detail-{household.code}" class="last:border-0">
 										<td colspan={COLUMNS.length} class="px-0 pb-4">
-											<HouseholdDetail {household} />
+											<HouseholdDetail {household} list={guests} />
 										</td>
 									</tr>
 								{/if}

@@ -85,6 +85,34 @@ Seeding into a database whose rules are the permissive Firestore-console default
 means every guest document is world-readable until the real rules land. Set the
 rules before the first seed, not after.
 
+### The admin write branch, if you want to edit from the dashboard
+
+The dashboard reads the collection with a `list` grant. Writing a household's own
+invitation wording back needs an `update` grant the deployed ruleset does not
+currently have — so **"Write their invitation" fails with a permission error
+until you add this**, by hand, in the console:
+
+```js
+match /rsvps/{code} {
+  allow update: if isWeddingAdmin()
+    && request.resource.data.diff(resource.data).affectedKeys()
+         .hasOnly(['customMessage', 'updatedAt']);
+}
+```
+
+Read it back and check what you are looking at. Three things matter:
+
+- `hasOnly` and not `hasAll`. Without it this grants any admin write at all,
+  including lowering `seatsAllocated` under a confirmed `partySize` — which
+  produces a document that fails `isWellFormed()` and locks that household out of
+  its own RSVP with no repair path. That is why the dashboard only ever offers to
+  write this one field.
+- `request.resource.data`, so it is checked against the incoming document rather
+  than the stored one.
+- Added to the existing `match /rsvps/{code}` block if there is one, not as a
+  second one. Firestore allows at most one `match` per path; a duplicate silently
+  does nothing and the refusal comes back looking like a bug.
+
 ### Do not deploy rules from here
 
 There is no `firebase.json` and no rules file in this repository, and adding one

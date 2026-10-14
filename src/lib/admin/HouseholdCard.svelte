@@ -3,15 +3,19 @@
 	import type { RsvpStatus } from '$lib/rsvp/types';
 	import HouseholdBadges from './HouseholdBadges.svelte';
 	import HouseholdDetail from './HouseholdDetail.svelte';
+	import type { GuestList } from './guests.svelte';
 
 	interface Props {
 		household: AdminRow;
 
 		expanded: boolean;
 		ontoggle: () => void;
+
+		/** Passed through to the detail panel, which needs it to save a message. */
+		list: GuestList;
 	}
 
-	let { household, expanded, ontoggle }: Props = $props();
+	let { household, expanded, ontoggle, list }: Props = $props();
 
 	/**
 	 * Status as a pill rather than the table's plain text.
@@ -82,7 +86,7 @@
 
 	{#if expanded}
 		<div id="card-detail-{household.code}" class="mt-4 border-t border-gold/20">
-			<HouseholdDetail {household} />
+			<HouseholdDetail {household} {list} />
 		</div>
 	{/if}
 </li>

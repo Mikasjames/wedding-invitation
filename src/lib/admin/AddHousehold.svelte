@@ -33,6 +33,7 @@
 	let side = $state<Side>('both');
 	let email = $state('');
 	let notes = $state('');
+	let customMessage = $state('');
 	let code = $state('');
 
 	/** Per-field messages, so the copy stays next to the input it belongs to. */
@@ -47,7 +48,15 @@
 		// Validation lives in `household-form.ts`, not here. It was inline at first
 		// and nothing could test it, which is how a `.trim()` on a number survived
 		// review and reached a real submit.
-		const result = validateHousehold({ householdName, seats, side, email, notes, code });
+		const result = validateHousehold({
+			householdName,
+			seats,
+			side,
+			email,
+			notes,
+			customMessage,
+			code
+		});
 
 		if (!result.ok) {
 			problems = result.problems;
@@ -72,6 +81,7 @@
 		side = 'both';
 		email = '';
 		notes = '';
+		customMessage = '';
 		code = '';
 		problems = {};
 	}
@@ -260,6 +270,26 @@
 					placeholder="Anything you want to remember"
 					class="{FIELD} rounded-2xl"
 				></textarea>
+			</label>
+
+			<label class="flex flex-col gap-2">
+				<span class={LABEL}>Their invitation, in your own words (optional)</span>
+				<textarea
+					rows="3"
+					bind:value={customMessage}
+					placeholder="Leave blank and everyone gets the standard message"
+					class="{FIELD} rounded-2xl"
+					aria-invalid={problems.customMessage ? 'true' : undefined}
+				></textarea>
+				{#if problems.customMessage}
+					<span class="font-body text-[11px] text-oxblood">{problems.customMessage}</span>
+				{:else}
+					<span class="font-body text-[11px] text-ink/50">
+						For the one aunt who needs saying properly. Use {'{household}'}, {'{names}'},
+						{'{deadline}'}, {'{link}'}, {'{code}'} and {'{seats}'}; the link is added for
+						you if you leave it out.
+					</span>
+				{/if}
 			</label>
 
 			<label class="flex flex-col gap-2">

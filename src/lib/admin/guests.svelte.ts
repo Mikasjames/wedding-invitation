@@ -50,6 +50,17 @@ export class GuestList {
 	createError = $state<string | null>(null);
 
 	/**
+	 * A household's invitation wording is being saved.
+	 *
+	 * One flag for the whole list rather than one per household, because only one
+	 * household can be open at a time — see `expandedCode` on the page.
+	 */
+	savingMessage = $state(false);
+
+	/** Why the last message save failed. Separate from `createError` for the same reason. */
+	messageError = $state<string | null>(null);
+
+	/**
 	 * The household just created, kept so the page can show something sendable.
 	 *
 	 * A code nobody can deliver is worse than no code at all, so creating one is
@@ -203,6 +214,7 @@ export class GuestList {
 		this.error = null;
 		this.lastCreated = null;
 		this.refreshError = null;
+		this.messageError = null;
 	}
 
 	/**
@@ -255,4 +267,46 @@ export class GuestList {
 
 	/** For the page's "not on the admin list" wording. */
 	static readonly accessDenied = ACCESS_DENIED;
+
+	/**
+	 * Saves one household's invitation wording, then re-reads the list.
+	 *
+	 * Only `customMessage` is written, so a failure here leaves every number on
+	 * screen exactly as it was — which is why this reports through its own error
+	 * and leaves `phase` alone, the same reasoning as `createError`.
+	 *
+	 * Re-reads rather than patching the row in place, for the same reason `create`
+	 * does: `totals` is `$derived` from the rows, so a hand-applied edit is another
+	 * place the dashboard can disagree with the server. The `updatedAt` the write
+	 * set is the other reason — a local row would still be showing the old one.
+	 */
+	async setMessage(code: string, customMessage: string): Promise<boolean> {
+		if (this.savingMessage) return false;
+
+		this.savingMessage = true;
+		this.messageError = null;
+
+		try {
+			const backend = await this.#getBackend();
+
+			if (!backend) {
+				this.messageError = 'Firestore is not configured for this build.';
+				return false;
+			}
+
+			await backend.setMessage(code, customMessage);
+
+			await this.#refresh();
+
+			return true;
+		} catch (error) {
+			// `describeGuestError` already carries a message specific to a ruleset
+			// with no admin write branch, which is the failure this most likely hits.
+			this.messageError = describeGuestError(error);
+
+			return false;
+		} finally {
+			this.savingMessage = false;
+		}
+	}
 }

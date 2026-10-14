@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { type HouseholdForm, validateHousehold } from './household-form';
+import { MAX_CUSTOM_MESSAGE } from '../rsvp/message';
 
 const GOOD: HouseholdForm = {
 	householdName: 'Dela Cruz Family',
+	customMessage: '',
 	seats: 4,
 	side: 'bride',
 	email: '',
@@ -24,7 +26,8 @@ describe('validateHousehold', () => {
 			side: 'bride',
 			seatsAllocated: 4,
 			contactEmail: null,
-			notes: ''
+			notes: '',
+			customMessage: ''
 		});
 	});
 
@@ -117,5 +120,29 @@ describe('validateHousehold', () => {
 			'householdName',
 			'seats'
 		]);
+	});
+
+	// An emptied textarea leaves whitespace behind, and a message of spaces stored
+	// on the document is one the dashboard would show as "in your own words" over a
+	// household that has none.
+	it('treats a blank custom message as no custom message', () => {
+		const result = check({ customMessage: '   \n  ' });
+
+		expect(result.ok && result.household.customMessage).toBe('');
+	});
+
+	it('keeps the wording a household was given, whitespace and all inside it', () => {
+		const result = check({ customMessage: '  Hi {household}!\n\nDo come.  ' });
+
+		expect(result.ok && result.household.customMessage).toBe('Hi {household}!\n\nDo come.');
+	});
+
+	// Caught here rather than at the store, so the couple sees it while the text is
+	// still in front of them.
+	it('refuses a custom message longer than the limit', () => {
+		const result = check({ customMessage: 'x'.repeat(MAX_CUSTOM_MESSAGE + 1) });
+
+		expect(result.ok).toBe(false);
+		expect(!result.ok && result.problems.customMessage).toContain(String(MAX_CUSTOM_MESSAGE));
 	});
 });

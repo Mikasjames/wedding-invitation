@@ -38,11 +38,9 @@ export interface CreatedHousehold {
 /**
  * What the dashboard needs from storage.
  *
- * `loadAll` and `create` only. Editing an existing household is still to come,
- * and it is a genuinely harder problem than this one: lowering `seatsAllocated`
- * under a confirmed `partySize` produces a document that fails `isWellFormed()`,
- * which locks that household out of its own RSVP with no repair path. A create
- * has no such hazard, which is why it goes first.
+ * `loadAll`, `create`, and `setMessage`. Editing a household generally is still
+ * to come, and is a genuinely harder problem than either of those — see
+ * `setMessage` for why one field turned out to be tractable.
  */
 export interface GuestListBackend {
 	/**
@@ -63,6 +61,30 @@ export interface GuestListBackend {
 	 * Throws `AdminCodeTakenError` if the code is already in use.
 	 */
 	create(household: NewHousehold): Promise<CreatedHousehold>;
+
+	/**
+	 * Rewrites one household's invitation wording. Empty string means the shared
+	 * template.
+	 *
+	 * Deliberately the *only* editable field, and the reason this is safe at all.
+	 *
+	 * Editing `seatsAllocated` is the hazard the rest of this file has been written
+	 * around: lowering it under a confirmed `partySize` produces a document that
+	 * fails `isWellFormed()`, which locks that household out of its own RSVP with
+	 * no repair path. Every other owner field is either arithmetic (`seats`) or
+	 * structural (`householdName`, `side`, `active`).
+	 *
+	 * `customMessage` is a string the rules have no opinion about — it is not in
+	 * `isWellFormed()`, not in the seat cap, and not in `onlyResponseFieldsChanged()`,
+	 * because it is an owner field a guest may never write. So a write that touches
+	 * nothing but `customMessage` and `updatedAt` cannot produce a document that
+	 * fails any check. The hazard is designed out rather than validated around,
+	 * which is also why the method takes one field rather than a patch object.
+	 *
+	 * Throws `AdminWriteRefusedError` when the deployed ruleset has no admin write
+	 * branch — see the note on that class.
+	 */
+	setMessage(code: string, customMessage: string): Promise<void>;
 }
 
 export class AdminDeniedError extends Error {}
@@ -72,6 +94,19 @@ export class AdminFailedError extends Error {}
 
 /** The supplied code is already someone's household. Not a generic failure. */
 export class AdminCodeTakenError extends Error {}
+
+/**
+ * The rules allowed the read but refused the write.
+ *
+ * Its own class because the generic `AdminDeniedError` message is actively wrong
+ * here. That one says the account is not on the admin list and points at the
+ * `list` grant — and an account that can read the collection perfectly well is
+ * exactly what reaches this. The deployed ruleset has an admin *read* branch and
+ * no admin *write* branch, so the truthful explanation is "the rules have no
+ * rule permitting this write", and the fix is a different line of the ruleset
+ * from the one the other message names.
+ */
+export class AdminWriteRefusedError extends Error {}
 
 /**
  * Shown when the rules refuse the collection.
@@ -97,6 +132,13 @@ export function describeGuestError(error: unknown): string {
 	// typing it differently, which is the opposite of what would help.
 	if (error instanceof AdminCodeTakenError) {
 		return 'That code is already in use by another household. Check it, or leave the code blank and we will generate one.';
+	}
+
+	// Before the generic permission failure, and worded as what it is: this account
+	// can read the guest list — it is on screen — so "not on the admin list" would
+	// send the couple looking at the wrong half of the ruleset.
+	if (error instanceof AdminWriteRefusedError) {
+		return 'The deployed Firestore rules let this account read the guest list but not change it. The ruleset has an admin read branch and no admin write branch; adding one is a manual step in the Firebase console.';
 	}
 
 	if (error instanceof AdminDatabaseMissingError) {

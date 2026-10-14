@@ -64,9 +64,30 @@ Firestore rules are the security boundary; the client never sees the collection.
 | File | What it is |
 |---|---|
 | `src/lib/rsvp/codes.ts` | Code generation and normalisation. The length is a security parameter. |
+| `src/lib/rsvp/message.ts` | The invitation message, and the `{token}` renderer behind it. |
 | `src/lib/rsvp/rsvp.svelte.ts` | The flow, as state. No Firestore import, so it is testable without a network. |
 | `src/lib/rsvp/firebase.client.ts` | The only file that touches Firestore, loaded lazily. |
 | `scripts/seed-rsvps.mjs` | Seeds the guest list. See `scripts/README.md`. |
+
+### The invitation message
+
+Every household gets one message, built by `invitationMessage()`. The wording
+lives in `wedding.rsvp.invitation` rather than in `message.ts`, so it can be
+rewritten without editing code — `README.md` below on editing copy.
+
+A household can also be given its own message, replacing the shared one
+entirely. Set it per household from `/admin`, or per row in the spreadsheet's
+`invitation` column. The link is re-attached if their wording omits it, so
+nobody can be sent an invitation they cannot open.
+
+The dashboard's save is the **only** write an admin can make, and it touches
+**only** `customMessage`. That is deliberate rather than narrow for its own sake:
+lowering `seatsAllocated` under a confirmed `partySize` produces a document that
+fails `isWellFormed()` and locks that household out of its own RSVP with no
+repair path. Restricting the interface to a field the rules have no opinion about
+means the dashboard cannot produce that document at all — there is no validation
+to forget. See `scripts/README.md` for the rules branch it needs, which is a
+manual step in the console.
 
 ### Firestore rules live in the console
 
@@ -102,6 +123,9 @@ cannot read the config file, and the config file cannot read the rules:
   timestamp in the deployed ruleset must be the same date.
 - `RESPONSE_FIELDS` in `src/lib/rsvp/types.ts` and `onlyResponseFieldsChanged()`
   in the deployed ruleset must list the same keys.
+
+`customMessage` is deliberately **not** in `RESPONSE_FIELDS`: it is the couple's
+wording, and a guest must never be able to change what an invitation says.
 
 ## Editing the invitation
 

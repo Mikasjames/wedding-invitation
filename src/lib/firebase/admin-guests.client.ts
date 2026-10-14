@@ -2,6 +2,8 @@ import { browser } from '$app/environment';
 import { databaseId, getApp, isConfigured } from './app';
 import {
 	AdminCodeTakenError,
+	AdminDeniedError,
+	AdminWriteRefusedError,
 	classifyGuestError,
 	type CreatedHousehold,
 	type GuestListBackend
@@ -83,6 +85,37 @@ export async function getGuestListBackend(): Promise<GuestListBackend | null> {
 				if (error instanceof AdminCodeTakenError) throw error;
 
 				throw classifyGuestError(error);
+			}
+		},
+
+		async setMessage(code, customMessage) {
+			const [app, firestore] = await Promise.all([getApp(), import('firebase/firestore')]);
+
+			const db = firestore.getFirestore(app, databaseId);
+
+			try {
+				// `updateDoc`, never `setDoc`, and only these two fields.
+				//
+				// `setDoc` without a merge replaces the whole document — it would erase
+				// the guest's answer and every owner field with whatever this call site
+				// happened to know. Naming the fields is the whole safety property: this
+				// call cannot alter `seatsAllocated`, so it cannot produce the
+				// over-committed document that locks a household out of its own RSVP.
+				await firestore.updateDoc(firestore.doc(db, 'rsvps', code), {
+					customMessage,
+					updatedAt: firestore.serverTimestamp()
+				});
+			} catch (error) {
+				const classified = classifyGuestError(error);
+
+				// A read-only ruleset refuses an `update` as `permission-denied`, exactly
+				// as it refuses a `list` for an account that is not an admin. Those two
+				// mean opposite things here — one is "you are not an admin", the other is
+				// "there is no rule allowing admins to write" — and the dashboard can
+				// tell them apart because it has just read the collection successfully.
+				throw classified instanceof AdminDeniedError
+					? new AdminWriteRefusedError(classified.message)
+					: classified;
 			}
 		}
 	};
