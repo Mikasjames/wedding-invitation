@@ -262,3 +262,16 @@ describe('visibleRows', () => {
 		expect(visibleRows(ALL, { ...view, query: 'zzzz' })).toEqual([]);
 	});
 });
+
+describe('sorting leaves the source list alone', () => {
+	// The backend hands over its array and the dashboard keeps it as the source for
+	// the totals strip, so a sort that mutated it would quietly reorder every
+	// subsequent read as well.
+	it('does not mutate the rows it was given', () => {
+		const before = names(ALL);
+
+		visibleRows(ALL, { query: '', filter: 'all', sort: 'code', direction: 'desc' });
+
+		expect(names(ALL)).toEqual(before);
+	});
+});

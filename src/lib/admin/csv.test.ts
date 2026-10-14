@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { activeRows, csvFileName, fromCsv, toCsv } from './csv';
-import { readAdminRow, sortRows, type AdminRow } from './row';
+import { readAdminRow, type AdminRow } from './row';
 
 function row(overrides: Partial<AdminRow> = {}): AdminRow {
 	return readAdminRow('W8K9JPTR4M', {

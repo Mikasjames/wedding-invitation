@@ -9,6 +9,13 @@
 	import { AdminSession } from '$lib/admin/auth.svelte';
 	import { downloadCsv } from '$lib/admin/download';
 	import { GuestList } from '$lib/admin/guests.svelte';
+	import {
+		FILTERS,
+		type Filter,
+		type SortKey,
+		countsFor,
+		visibleRows
+	} from '$lib/admin/table';
 	import { ACCESS_DENIED } from '$lib/admin/guests.driver';
 	import type { Side } from '$lib/rsvp/types';
 	import { isAuthConfigured } from '$lib/firebase/app';
@@ -34,12 +41,12 @@
 	 * header stops lining up with its figures and nothing fails a build. A column
 	 * that says where its own numbers go cannot do that.
 	 */
-	const COLUMNS: ReadonlyArray<{ label: string; align?: 'right' }> = [
-		{ label: 'Household' },
-		{ label: 'Code' },
+	const COLUMNS: ReadonlyArray<{ label: string; align?: 'right'; sort?: SortKey }> = [
+		{ label: 'Household', sort: 'household' },
+		{ label: 'Code', sort: 'code' },
 		{ label: 'Side' },
-		{ label: 'Seats', align: 'right' },
-		{ label: 'Confirmed', align: 'right' },
+		{ label: 'Seats', align: 'right', sort: 'seats' },
+		{ label: 'Confirmed', align: 'right', sort: 'confirmed' },
 		{ label: 'Status' }
 	];
 
@@ -128,6 +135,54 @@
 	function toggle(code: string) {
 		expandedCode = expandedCode === code ? null : code;
 	}
+
+	// --- Finding a household -------------------------------------------------
+	//
+	// Plain component state rather than anything on `GuestList`. These narrow what
+	// is on screen; they do not change what the server holds, and the totals strip
+	// above is deliberately left showing the whole list so the figures and the
+	// number of rows on screen never quietly disagree about which is which.
+
+	let query = $state('');
+	let filter = $state<Filter>('all');
+	let sort = $state<SortKey>('household');
+	let direction = $state<'asc' | 'desc'>('asc');
+
+	/** One answer for both renderings — see `visibleRows`. */
+	const shown = $derived(visibleRows(guests.rows, { query, filter, sort, direction }));
+
+	/** Faceted on the query, ignoring the filter, so the chips describe what was typed. */
+	const counts = $derived(countsFor(guests.rows, query));
+
+	/** The whole list is empty, as opposed to nothing matching what was asked for. */
+	const listIsEmpty = $derived(guests.rows.length === 0);
+
+	const narrowing = $derived(!listIsEmpty && (query.trim() !== '' || filter !== 'all'));
+
+	function sortBy(key: SortKey) {
+		// Same column again flips it; a new column starts ascending, except for
+		// confirmed heads and last change, where the useful first click is
+		// "biggest" and "most recent" rather than "smallest" and "longest ago".
+		if (sort === key) direction = direction === 'asc' ? 'desc' : 'asc';
+		else {
+			sort = key;
+			direction = key === 'confirmed' || key === 'responded' ? 'desc' : 'asc';
+		}
+	}
+
+	function clearFilters() {
+		query = '';
+		filter = 'all';
+	}
+
+	const CHIP_LABEL: Record<Filter, string> = {
+		all: 'All',
+		awaiting: 'Awaiting',
+		attending: 'Attending',
+		declined: 'Declined',
+		archived: 'Archived',
+		over: 'Over'
+	};
 </script>
 
 <svelte:head>
@@ -335,9 +390,18 @@
 				"Could not load".
 			-->
 			{#if guests.refreshError}
+				<!--
+					Branches on whether there is a receipt on screen. The create wording is
+					load-bearing — it is what stops a household existing in Firestore while
+					the couple are shown no code for it — so it stays exactly as it was, and
+					the refresh button gets its own sentence rather than inheriting one
+					about a household that was never added.
+				-->
 				<p role="status" class={ERROR_CLASS}>
-					That household was added, but the list could not be refreshed, so it may be
-					missing below. {guests.refreshError}
+					{guests.lastCreated
+						? 'That household was added, but the list could not be refreshed, so it may be missing below.'
+						: 'The list could not be refreshed, so it may be out of date.'}
+					{guests.refreshError}
 				</p>
 			{/if}
 
@@ -372,6 +436,77 @@
 			{/if}
 
 			<!--
+				Finding a household.
+
+				There was no way to search, narrow or reorder any of this. `sortRows`
+				fixed the order as active-then-name and there was nothing else, which
+				against the few hundred rows `GuestList` already anticipates means a
+				couple cannot find one household without reading every line.
+
+				No debounce on the box: a few hundred rows times four `toLowerCase`
+				calls per keystroke is nothing, and debouncing would make the list feel
+				laggy to buy nothing.
+			-->
+			<section class="flex flex-col gap-3">
+				<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+					<label class="flex-1">
+						<span class="sr-only">Search households</span>
+						<input
+							type="search"
+							bind:value={query}
+							placeholder="Search a name, a code or an email"
+							class="w-full rounded-full border border-gold/30 bg-ivory px-5 py-3 font-body text-sm text-ink placeholder:text-ink/40"
+						/>
+					</label>
+
+					<!--
+						`refresh()` rather than `load()`, which sets `phase = 'loading'`
+						and unmounts the branch — taking an open invitation editor and
+						everything typed into it with it. This leaves the rows, the
+						search box and the filter where they were, which is also why
+						there is no state to restore after a refresh.
+					-->
+					<button
+						type="button"
+						onclick={() => guests.refresh()}
+						disabled={guests.refreshing}
+						class="shrink-0 rounded-full border border-gold/30 px-5 py-3 font-body text-[10px] font-medium tracking-[0.28em] text-gold-deep uppercase transition hover:opacity-80 disabled:opacity-40"
+					>
+						{guests.refreshing ? 'Refreshing' : 'Refresh'}
+					</button>
+				</div>
+
+				<div class="flex flex-wrap items-center gap-2">
+					{#each FILTERS as chip (chip)}
+						<button
+							type="button"
+							onclick={() => (filter = chip)}
+							aria-pressed={filter === chip}
+							class="rounded-full border px-3 py-1.5 font-body text-[10px] tracking-[0.18em] uppercase transition
+								{filter === chip
+								? 'border-plum bg-plum text-champagne'
+								: 'border-gold/30 text-ink/60 hover:opacity-80'}"
+						>
+							{CHIP_LABEL[chip]}
+							<span class="opacity-70">{counts[chip]}</span>
+						</button>
+					{/each}
+				</div>
+
+				<p class="font-body text-[11px] text-ink/50" aria-live="polite">
+					{#if listIsEmpty}
+						Nothing on the list yet.
+					{:else if shown.length === guests.rows.length}
+						Showing all {guests.rows.length}
+						{guests.rows.length === 1 ? 'household' : 'households'}.
+					{:else}
+						Showing {shown.length} of {guests.rows.length}
+						{guests.rows.length === 1 ? 'household' : 'households'}.
+					{/if}
+				</p>
+			</section>
+
+			<!--
 				Two renderings of the same rows, split at `sm`.
 
 				`AddHousehold` says outright that it is built for a phone — "we
@@ -391,14 +526,35 @@
 				dashboard should say so rather than presenting six zeroes and a
 				header.
 			-->
-			{#if guests.rows.length === 0}
+			{#if listIsEmpty}
 				<p class="rounded-2xl border border-gold/20 px-5 py-8 text-center font-display text-lg text-ink/50">
 					No households on the list yet. Add one above, or seed the list from a
 					spreadsheet.
 				</p>
+			{:else if shown.length === 0}
+				<!--
+					Its own message, because it has the same shape as an empty list and means the
+					opposite. A filter matching nothing would otherwise read as data loss, which
+					is the one thing a narrowing control must never look like.
+				-->
+				<div class="rounded-2xl border border-gold/20 px-5 py-8 text-center">
+					<p class="font-display text-lg text-ink/50">
+						No households match{query.trim() ? ` “${query.trim()}”` : ''}.
+					</p>
+
+					{#if narrowing}
+						<button
+							type="button"
+							onclick={clearFilters}
+							class="mt-4 rounded-full border border-gold/30 px-5 py-3 font-body text-[10px] font-medium tracking-[0.28em] text-gold-deep uppercase transition hover:opacity-80"
+						>
+							Show the whole list
+						</button>
+					{/if}
+				</div>
 			{:else}
 				<ul class="divide-y divide-gold/10 rounded-2xl border border-gold/20 sm:hidden">
-					{#each guests.rows as household (household.code)}
+					{#each shown as household (household.code)}
 						<HouseholdCard
 							{household}
 							list={guests}
@@ -419,10 +575,34 @@
 								{#each COLUMNS as column (column.label)}
 									<th
 										scope="col"
+										aria-sort={column.sort && sort === column.sort
+											? direction === 'asc'
+												? 'ascending'
+												: 'descending'
+											: undefined}
 										class="px-4 py-3 font-body text-[10px] font-medium tracking-[0.28em] text-gold-deep uppercase
 											{column.align === 'right' ? 'text-right' : ''}"
 									>
-										{column.label}
+										{#if column.sort}
+											{@const key = column.sort}
+											<!--
+												A button rather than an `onclick` on the `<th>`, so sorting is reachable
+												from the keyboard and `aria-sort` can report it. Clicking a heading is
+												otherwise a decoration on a heading.
+											-->
+											<button
+												type="button"
+												onclick={() => sortBy(key)}
+												class="inline-flex items-center gap-1 uppercase transition hover:opacity-80"
+											>
+												{column.label}
+												<span aria-hidden="true" class="text-[8px]">
+													{sort === column.sort ? (direction === 'asc' ? '▲' : '▼') : '⇅'}
+												</span>
+											</button>
+										{:else}
+											{column.label}
+										{/if}
 									</th>
 								{/each}
 							</tr>
@@ -434,7 +614,7 @@
 								the row above it. `border-b-0` while open keeps the pair joined
 								instead of drawing a line through the middle of one household.
 							-->
-							{#each guests.rows as household (household.code)}
+							{#each shown as household (household.code)}
 								{@const open = expandedCode === household.code}
 								<tr
 									class="border-b border-gold/10 {open

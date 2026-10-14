@@ -127,11 +127,3 @@ export function readAdminRow(code: string, data: Record<string, unknown> | undef
 		overcommitted: partySize > seatsAllocated
 	};
 }
-
-/** Households as they appear in a table: active first, then by name. */
-export function sortRows(rows: AdminRow[]): AdminRow[] {
-	return [...rows].sort(
-		(a, b) =>
-			Number(b.active) - Number(a.active) || a.householdName.localeCompare(b.householdName)
-	);
-}

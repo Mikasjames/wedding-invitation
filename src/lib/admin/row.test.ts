@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readAdminRow, sortRows } from './row';
+import { readAdminRow } from './row';
 
 /** Stands in for a Firestore `Timestamp`, which has `toDate()` but no class identity. */
 function timestamp(date: Date) {
@@ -122,42 +122,6 @@ describe('readAdminRow', () => {
 	});
 });
 
-describe('sortRows', () => {
-	it('puts active households before archived ones', () => {
-		const rows = [
-			readAdminRow('AAAA00000000', { householdName: 'Archived', active: false })!,
-			readAdminRow('BBBB00000000', { householdName: 'Active', active: true })!
-		];
-
-		expect(sortRows(rows).map((row) => row.householdName)).toEqual(['Active', 'Archived']);
-	});
-
-	it('sorts by name within each group', () => {
-		const rows = [
-			readAdminRow('CCCC00000000', { householdName: 'Santos' })!,
-			readAdminRow('DDDD00000000', { householdName: 'Aguinaldo' })!,
-			readAdminRow('EEEE00000000', { householdName: 'Reyes' })!
-		];
-
-		expect(sortRows(rows).map((row) => row.householdName)).toEqual([
-			'Aguinaldo',
-			'Reyes',
-			'Santos'
-		]);
-	});
-
-	it('does not mutate its input', () => {
-		const rows = [
-			readAdminRow('BBBB00000000', { householdName: 'Bravo' })!,
-			readAdminRow('AAAA00000000', { householdName: 'Alpha' })!
-		];
-		const before = rows.map((row) => row.code);
-
-		sortRows(rows);
-
-		expect(rows.map((row) => row.code)).toEqual(before);
-	});
-});
 describe('customMessage', () => {
 	// The invitation *to* a household, which is not `message` — that is the note
 	// they leave back. Two fields, one screen, similar names, so the read is pinned

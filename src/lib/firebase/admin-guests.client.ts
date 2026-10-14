@@ -10,7 +10,7 @@ import {
 } from '../admin/guests.driver';
 import { newHousehold } from '../rsvp/guests';
 import { generateCode } from '../rsvp/codes';
-import { readAdminRow, sortRows } from '../admin/row';
+import { readAdminRow } from '../admin/row';
 
 /**
  * Firestore binding for the dashboard.
@@ -39,11 +39,14 @@ export async function getGuestListBackend(): Promise<GuestListBackend | null> {
 				// misconfigured ruleset.
 				const snapshot = await firestore.getDocs(firestore.collection(db, 'rsvps'));
 
-				return sortRows(
-					snapshot.docs
-						.map((doc) => readAdminRow(doc.id, doc.data()))
-						.filter((row): row is NonNullable<typeof row> => row !== null)
-				);
+				// Deliberately unsorted. Order is a view decision — active first,
+				// then whichever column the couple clicked — and it now lives in
+				// `visibleRows`. Sorting here as well meant two places deciding it,
+				// which is how the table and the phone cards end up disagreeing about
+				// what "first" means.
+				return snapshot.docs
+					.map((doc) => readAdminRow(doc.id, doc.data()))
+					.filter((row): row is NonNullable<typeof row> => row !== null);
 			} catch (error) {
 				throw classifyGuestError(error);
 			}

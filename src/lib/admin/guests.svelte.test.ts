@@ -678,3 +678,105 @@ describe('GuestList.setMessage', () => {
 		expect(list.messageError).toContain('not configured');
 	});
 });
+
+describe('GuestList.refresh', () => {
+	it('re-reads the rows', async () => {
+		const { list, loadAll } = setup();
+
+		await list.sync('user-1');
+		expect(loadAll).toHaveBeenCalledTimes(1);
+
+		await list.refresh();
+
+		expect(loadAll).toHaveBeenCalledTimes(2);
+	});
+
+	// The reason this is not `load()`. `load()` opens by setting
+	// `phase = 'loading'`, and the page branches on `phase` — so the whole branch
+	// unmounts, taking an open invitation editor and everything typed into it with
+	// it. A couple refreshing to pull in a new answer should not lose their
+	// half-written message to find out it arrived.
+	it('leaves the dashboard up, so nothing on it is destroyed', async () => {
+		const { list } = setup();
+
+		await list.sync('user-1');
+		await list.refresh();
+
+		expect(list.phase).toBe('ready');
+		expect(list.rows).toHaveLength(2);
+	});
+
+	it('reports a failure without demoting the list', async () => {
+		// Breaks only after the first load, so the refresh is what fails. A backend
+		// that throws on every read would fail the initial load too and prove nothing
+		// about what refresh does to the page.
+		let broken = false;
+
+		const flaky = {
+			...backend(),
+			loadAll: async () => {
+				if (broken) throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
+				return ROWS;
+			}
+		};
+
+		const { list } = setup(flaky);
+
+		await list.sync('user-1');
+		const before = list.rows;
+
+		broken = true;
+		await list.refresh();
+
+		expect(list.refreshError).toBeTruthy();
+		expect(list.phase).toBe('ready');
+		expect(list.rows).toBe(before);
+	});
+
+	// Checked before the first await, or two clicks both pass the guard.
+	it('refuses a second refresh while one is in flight', async () => {
+		const { list, loadAll } = setup();
+
+		await list.sync('user-1');
+
+		const first = list.refresh();
+		await list.refresh();
+
+		expect(loadAll).toHaveBeenCalledTimes(2);
+
+		await first;
+	});
+
+	// Nothing on screen changes during a refresh, so this flag exists only to
+	// disable the button — but a flag left stuck on would disable it forever.
+	it('clears the busy flag however it finishes', async () => {
+		let broken = false;
+
+		const flaky = {
+			...backend(),
+			loadAll: async () => {
+				if (broken) throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
+				return ROWS;
+			}
+		};
+
+		const { list } = setup(flaky);
+
+		await list.sync('user-1');
+
+		broken = true;
+		await list.refresh();
+
+		expect(list.refreshing).toBe(false);
+	});
+
+	it('drops the flag on sign-out', async () => {
+		const { list } = setup();
+
+		await list.sync('user-1');
+		await list.refresh();
+		await list.sync(null);
+
+		expect(list.refreshing).toBe(false);
+	});
+});

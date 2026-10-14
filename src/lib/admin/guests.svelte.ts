@@ -69,6 +69,15 @@ export class GuestList {
 	lastCreated = $state<CreatedHousehold | null>(null);
 
 	/**
+	 * A refresh is in flight.
+	 *
+	 * Only to disable the button. `refresh()` deliberately does not move `phase`,
+	 * so unlike `creating` and `savingMessage` there is no state on screen that
+	 * would otherwise imply one — the list simply does not change for a moment.
+	 */
+	refreshing = $state(false);
+
+	/**
 	 * The rows on screen may be out of date, by one household.
 	 *
 	 * Set only by the background refresh that follows a create. It exists because
@@ -176,9 +185,23 @@ export class GuestList {
 	}
 
 	/**
-	 * Re-reads the rows after a write, without touching `phase`.
+	 * Re-reads the rows without touching `phase`.
 	 *
-	 * `load()` is the wrong tool here. It opens by setting `phase = 'loading'`,
+	 * Public because the refresh button needs it, and for the same reason it is
+	 * not `load()`: `load()` opens by setting `phase = 'loading'`, which unmounts
+	 * the whole branch. On the dashboard that does not merely cost a frame of
+	 * scrolling — it destroys an open invitation editor and everything typed into
+	 * it, because the component carrying the draft is unmounted with everything
+	 * else. A couple who refreshes to pull in a new answer should not lose their
+	 * half-written message to find out it arrived.
+	 *
+	 * It also leaves the page's search box, filter and sort in place, which a
+	 * demoting reload would throw away and the couple would have to retype after
+	 * every refresh.
+	 *
+	 * After a write, the reasoning is as below.
+	 *
+	 * `load()` is the wrong tool for either. It opens by setting `phase = 'loading'`,
 	 * which unmounts the form mid-create, and on failure it sets `'failed'` and
 	 * clears the rows — and the page branches on `phase`, so a failed refresh
 	 * replaces a working dashboard with "Could not load" and takes the receipt with
@@ -194,7 +217,14 @@ export class GuestList {
 	 * failures — `sync`, "Try again", "Check again" — where clearing the rows is
 	 * also the right security call.
 	 */
-	async #refresh(): Promise<void> {
+	async refresh(): Promise<void> {
+		// Set before the first await, for the same reason `create` does it on this
+		// side of the guard rather than after: checking and then setting either side
+		// of an `await` lets two clicks both pass.
+		if (this.refreshing) return;
+
+		this.refreshing = true;
+
 		try {
 			const backend = await this.#getBackend();
 
@@ -204,6 +234,8 @@ export class GuestList {
 			this.refreshError = null;
 		} catch (error) {
 			this.refreshError = describeGuestError(error);
+		} finally {
+			this.refreshing = false;
 		}
 	}
 
@@ -215,6 +247,7 @@ export class GuestList {
 		this.lastCreated = null;
 		this.refreshError = null;
 		this.messageError = null;
+		this.refreshing = false;
 	}
 
 	/**
@@ -253,7 +286,7 @@ export class GuestList {
 			// costs nothing.
 			this.lastCreated = created;
 
-			await this.#refresh();
+			await this.refresh();
 
 			return created;
 		} catch (error) {
@@ -296,7 +329,7 @@ export class GuestList {
 
 			await backend.setMessage(code, customMessage);
 
-			await this.#refresh();
+			await this.refresh();
 
 			return true;
 		} catch (error) {
