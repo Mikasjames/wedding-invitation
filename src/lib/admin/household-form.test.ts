@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { type HouseholdForm, validateHousehold } from './household-form';
+import {
+	type HouseholdEditForm,
+	type HouseholdForm,
+	validateHousehold,
+	validateHouseholdEdit
+} from './household-form';
 import { MAX_CUSTOM_MESSAGE } from '../rsvp/message';
 
 const GOOD: HouseholdForm = {
@@ -144,5 +149,115 @@ describe('validateHousehold', () => {
 
 		expect(result.ok).toBe(false);
 		expect(!result.ok && result.problems.customMessage).toContain(String(MAX_CUSTOM_MESSAGE));
+	});
+});
+const EDIT: HouseholdEditForm = {
+	householdName: 'Dela Cruz Family',
+	seatsAllocated: 4,
+	side: 'bride',
+	contactEmail: '',
+	notes: '',
+	active: true
+};
+
+function checkEdit(overrides: Partial<HouseholdEditForm> = {}, partySize = 0) {
+	return validateHouseholdEdit({ ...EDIT, ...overrides }, partySize);
+}
+
+describe('validateHouseholdEdit', () => {
+	it('accepts a well-formed edit', () => {
+		const result = checkEdit();
+
+		expect(result.ok && result.edit).toEqual({
+			householdName: 'Dela Cruz Family',
+			seatsAllocated: 4,
+			side: 'bride',
+			contactEmail: null,
+			notes: '',
+			active: true
+		});
+	});
+
+	it('trims the name and the notes', () => {
+		const result = checkEdit({ householdName: '  Santos  ', notes: ' a seat  ' });
+
+		expect(result.ok && result.edit.householdName).toBe('Santos');
+		expect(result.ok && result.edit.notes).toBe('a seat');
+	});
+
+	// The rule the deployed `seatCountStaysValid()` also enforces. Lowering seats
+	// under a confirmed party produces a document that fails `isWellFormed()`, and
+	// that household's next RSVP fails the same check — they cannot lower their own
+	// `partySize` to escape it, so there is no route back for them.
+	it('refuses seats below a confirmed party', () => {
+		const result = checkEdit({ seatsAllocated: 2 }, 3);
+
+		expect(result.ok).toBe(false);
+		expect(!result.ok && result.problems.seatsAllocated).toContain('3 seats');
+	});
+
+	// Why the message above is always plural. One seat is the smallest allocation
+	// `isValidSeatCount` permits, so a household that confirmed exactly one can never
+	// conflict with a valid number — the singular branch is unreachable, and a
+	// `partySize === 1` special case would be untestable code.
+	it('cannot conflict for a household that confirmed exactly one', () => {
+		expect(checkEdit({ seatsAllocated: 1 }, 1).ok).toBe(true);
+		expect(checkEdit({ seatsAllocated: 0 }, 1).ok).toBe(false);
+	});
+
+	// The asymmetry that keeps the repair open. An over-committed household is fixed
+	// by raising its allocation to meet the confirmed count, so the guard must let
+	// that through or the dashboard becomes the one place a broken household cannot
+	// be rescued from.
+	it('allows seats up to the confirmed count', () => {
+		const result = checkEdit({ seatsAllocated: 3 }, 3);
+
+		expect(result.ok && result.edit.seatsAllocated).toBe(3);
+	});
+
+	it('allows raising seats above the confirmed count', () => {
+		const result = checkEdit({ seatsAllocated: 9 }, 3);
+
+		expect(result.ok && result.edit.seatsAllocated).toBe(9);
+	});
+
+	// A household nobody has answered has nothing to be stranded by, so the seat
+	// check is the plain one `validateHousehold` applies.
+	it('holds seats to one when nobody has confirmed', () => {
+		expect(checkEdit({ seatsAllocated: 0 }).ok).toBe(false);
+		expect(checkEdit({ seatsAllocated: 1 }).ok).toBe(true);
+	});
+
+	it('asks for a seat count rather than reporting a bad one', () => {
+		const result = checkEdit({ seatsAllocated: null });
+
+		expect(!result.ok && result.problems.seatsAllocated).toContain('How many seats');
+	});
+
+	// Editing clears an email, so that has to be possible — or a mistyped address
+	// could never be removed.
+	it('treats a cleared email as none rather than as invalid', () => {
+		expect(checkEdit({ contactEmail: '   ' }).ok).toBe(true);
+	});
+
+	it('rejects an email that does not look like one', () => {
+		const result = checkEdit({ contactEmail: 'nope' });
+
+		expect(!result.ok && result.problems.contactEmail).toBeTruthy();
+	});
+
+	it('asks for a name rather than storing a blank one', () => {
+		const result = checkEdit({ householdName: '  ' });
+
+		expect(!result.ok && result.problems.householdName).toBeTruthy();
+	});
+
+	// Archiving is a save like any other and carries no extra validation. What it
+	// does to the household's link is the component's to warn about, because that is
+	// a thing to be told rather than a thing to be checked.
+	it('accepts an archive', () => {
+		const result = checkEdit({ active: false });
+
+		expect(result.ok && result.edit.active).toBe(false);
 	});
 });

@@ -6,10 +6,12 @@ import {
 	AdminDeniedError,
 	AdminFailedError,
 	AdminOfflineError,
+	AdminSeatsBelowConfirmedError,
 	AdminWriteRefusedError,
 	classifyGuestError,
 	describeGuestError,
-	type GuestListBackend
+	type GuestListBackend,
+	type HouseholdEdit
 } from './guests.driver';
 import { GuestList } from './guests.svelte';
 import { readAdminRow, type AdminRow } from './row';
@@ -45,7 +47,8 @@ function backend(options: { rows?: AdminRow[]; throws?: Error } = {}): GuestList
 			seatsAllocated: household.seatsAllocated,
 			customMessage: household.customMessage ?? ''
 		}),
-		setMessage: async () => {}
+		setMessage: async () => {},
+		update: async () => {},
 	};
 }
 
@@ -61,11 +64,16 @@ function setup(resolved: GuestListBackend | null = backend()) {
 		(resolved?.setMessage ?? (async () => {})) as GuestListBackend['setMessage']
 	);
 
+	const update = vi.fn((resolved?.update ?? (async () => {})) as GuestListBackend['update']);
+
 	return {
 		loadAll,
 		create,
 		setMessage,
-		list: new GuestList(async () => (resolved ? { loadAll, create, setMessage } : null))
+		update,
+		list: new GuestList(async () =>
+			resolved ? { loadAll, create, setMessage, update } : null
+		)
 	};
 }
 
@@ -262,7 +270,8 @@ describe('GuestList failures', () => {
 			create: async () => {
 				throw new AdminDeniedError();
 			},
-			setMessage: async () => {}
+			setMessage: async () => {},
+			update: async () => {},
 		}));
 		await denied.sync('user-2');
 
@@ -302,7 +311,8 @@ describe('GuestList.reload', () => {
 			create: async () => {
 				throw new AdminOfflineError();
 			},
-			setMessage: async () => {}
+			setMessage: async () => {},
+			update: async () => {},
 		}));
 
 		await failing.sync('user-1');
@@ -379,7 +389,8 @@ describe('GuestList.create', () => {
 				householdName: 'Reyes',
 				seatsAllocated: 6
 			}),
-			setMessage: async () => {}
+			setMessage: async () => {},
+			update: async () => {},
 		}));
 		await flaky.sync('user-1');
 		expect(flaky.phase).toBe('ready');
@@ -409,7 +420,8 @@ describe('GuestList.create', () => {
 				householdName: 'Reyes',
 				seatsAllocated: 6
 			}),
-			setMessage: async () => {}
+			setMessage: async () => {},
+			update: async () => {},
 		}));
 		await flaky.sync('user-1');
 
@@ -433,7 +445,8 @@ describe('GuestList.create', () => {
 			create: async () => {
 				throw new AdminOfflineError();
 			},
-			setMessage: async () => {}
+			setMessage: async () => {},
+			update: async () => {},
 		}));
 		await failing.sync('user-1');
 
@@ -484,7 +497,8 @@ describe('GuestList.create', () => {
 			create: async () => {
 				throw new AdminDeniedError();
 			},
-			setMessage: async () => {}
+			setMessage: async () => {},
+			update: async () => {},
 		}));
 		await denied.sync('user-1');
 
@@ -502,7 +516,8 @@ describe('GuestList.create', () => {
 			create: async () => {
 				throw new AdminCodeTakenError('W8K9JPTR4M');
 			},
-			setMessage: async () => {}
+			setMessage: async () => {},
+			update: async () => {},
 		}));
 		await taken.sync('user-1');
 
@@ -520,7 +535,8 @@ describe('GuestList.create', () => {
 				if (fail) throw new AdminOfflineError();
 				return { code: 'NEW0000001', householdName: 'A', seatsAllocated: 2 };
 			},
-			setMessage: async () => {}
+			setMessage: async () => {},
+			update: async () => {},
 		}));
 		await flaky.sync('user-1');
 
@@ -545,7 +561,8 @@ describe('GuestList.create', () => {
 				await held;
 				return { code: 'NEW0000001', householdName: 'A', seatsAllocated: 2 };
 			},
-			setMessage: async () => {}
+			setMessage: async () => {},
+			update: async () => {},
 		}));
 		await slow.sync('user-1');
 
@@ -784,7 +801,8 @@ describe('GuestList.refresh', () => {
 				householdName: 'Reyes',
 				seatsAllocated: 6
 			}),
-			setMessage: async () => {}
+			setMessage: async () => {},
+			update: async () => {},
 		}));
 
 		await counting.sync('user-1');
@@ -838,5 +856,154 @@ describe('GuestList.refresh', () => {
 		await list.sync(null);
 
 		expect(list.refreshing).toBe(false);
+	});
+});
+
+const EDIT: HouseholdEdit = {
+	householdName: 'Dela Cruz Family',
+	side: 'bride',
+	seatsAllocated: 4,
+	contactEmail: 'dc@example.com',
+	notes: 'Seat by the window',
+	active: true
+};
+
+describe('GuestList.update', () => {
+	// The property the whole method rests on. `HouseholdEdit` carries every owner
+	// field and none of `ResponseFields`, so the write cannot reach `partySize` or
+	// `status` — and it cannot reach `partySize` in particular, because that is the
+	// number the deployed `seatCountStaysValid()` checks. `setMessage` could assert
+	// the same for one field; this is the claim for six.
+	it('writes the code and the six owner fields, and nothing else', async () => {
+		const { list, update } = setup();
+
+		await list.sync('user-1');
+		await list.update('BBBB00000001', EDIT);
+
+		expect(update).toHaveBeenCalledWith('BBBB00000001', EDIT);
+
+		const written = update.mock.calls[0][1];
+		for (const key of Object.keys(EDIT)) expect(written).toHaveProperty(key);
+		for (const key of ['partySize', 'status', 'attendeeNames', 'message', 'respondedAt']) {
+			expect(written).not.toHaveProperty(key);
+		}
+	});
+
+	it('reports success', async () => {
+		const { list } = setup();
+		await list.sync('user-1');
+
+		expect(await list.update('BBBB00000001', EDIT)).toBe(true);
+		expect(list.editError).toBeNull();
+	});
+
+	// Re-read rather than patch the row, for the same reason `create` does: `totals`
+	// is `$derived` from the rows, so a hand-applied edit is another place the
+	// dashboard can disagree with the server, and `updatedAt` would stay stale.
+	it('re-reads the list so the timestamps are not stale', async () => {
+		const { list, loadAll } = setup();
+
+		await list.sync('user-1');
+		expect(loadAll).toHaveBeenCalledTimes(1);
+
+		await list.update('BBBB00000001', EDIT);
+
+		expect(loadAll).toHaveBeenCalledTimes(2);
+	});
+
+	it('says so when there is no backend at all', async () => {
+		const { list } = setup(null);
+
+		expect(await list.update('BBBB00000001', EDIT)).toBe(false);
+		expect(list.editError).toContain('not configured');
+	});
+
+	// Checked before the first await, or two rapid saves both pass the guard.
+	it('refuses a second save while one is in flight', async () => {
+		const { list, update } = setup();
+
+		await list.sync('user-1');
+
+		const first = list.update('BBBB00000001', EDIT);
+		const second = await list.update('BBBB00000001', EDIT);
+
+		expect(second).toBe(false);
+		expect(update).toHaveBeenCalledTimes(1);
+
+		await first;
+	});
+
+	// A refused save says nothing about whether the guest list still loads. Flipping
+	// the dashboard to "not on the admin list" because one household edit was refused
+	// would be alarming and wrong — and this is the reachable case now that the admin
+	// arm names six fields: a `hasOnly` that lists five of them refuses every save.
+	it('explains a refused write without demoting the list', async () => {
+		const { list } = setup({
+			...backend(),
+			update: async () => {
+				throw new AdminWriteRefusedError();
+			}
+		});
+
+		await list.sync('user-1');
+		const before = list.rows;
+
+		expect(await list.update('BBBB00000001', EDIT)).toBe(false);
+		expect(list.editError).toContain('seatsAllocated');
+		expect(list.editError).not.toContain('not on the admin list');
+		expect(list.phase).toBe('ready');
+		expect(list.rows).toBe(before);
+	});
+
+	// The rules refuse a seat edit that would strand a household, and say so as a
+	// plain permission error. Naming it lets the couple be told what the number is
+	// rather than being sent to look at their ruleset.
+	it('names the confirmed count when a save would strand a household', async () => {
+		const { list } = setup({
+			...backend(),
+			update: async () => {
+				throw new AdminSeatsBelowConfirmedError(2, 3);
+			}
+		});
+
+		await list.sync('user-1');
+
+		expect(await list.update('BBBB00000001', { ...EDIT, seatsAllocated: 2 })).toBe(false);
+		expect(list.editError).toContain('3');
+		expect(list.editError).toContain('cannot go below');
+	});
+
+	// The editor's guard should mean this never reaches Firestore, but the rules are
+	// the guard rather than the client — so a stale tab, or a client other than this
+	// one, must be told what happened rather than seeing a generic permission error.
+	it('does not claim the account is off the admin list for a seat refusal', async () => {
+		const { list } = setup({
+			...backend(),
+			update: async () => {
+				throw new AdminSeatsBelowConfirmedError(4, 6);
+			}
+		});
+
+		await list.sync('user-1');
+		await list.update('BBBB00000001', EDIT);
+
+		expect(list.editError).not.toContain('admin list');
+	});
+
+	it('forgets the last failure when the account signs out', async () => {
+		const { list } = setup({
+			...backend(),
+			update: async () => {
+				throw new AdminWriteRefusedError();
+			}
+		});
+
+		await list.sync('user-1');
+		await list.update('BBBB00000001', EDIT);
+		expect(list.editError).not.toBeNull();
+
+		await list.sync(null);
+
+		expect(list.editError).toBeNull();
 	});
 });

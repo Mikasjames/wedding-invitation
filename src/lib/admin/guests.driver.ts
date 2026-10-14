@@ -51,11 +51,46 @@ export interface CreatedHousehold {
 }
 
 /**
+ * Every owner field a household has, for a save.
+ *
+ * A full replacement rather than a partial patch. The editor always has all six
+ * loaded, so nothing here is optional, and a required field cannot be cleared by
+ * leaving it out — which is the failure a `Partial<>` would invite.
+ *
+ * The closed shape is the safety property, and it is what replaced the older
+ * argument against patch objects. `setMessage` takes one field because one string
+ * the rules have no opinion about could be argued about safely; six fields cannot.
+ * What has to survive that change is narrower than "one field at a time": it is that
+ * a caller cannot express a write the deployed rules would refuse. Here that holds
+ * because `status`, `partySize`, `attendeeNames`, `message` and `respondedAt` are not
+ * properties of this interface — the whole of `ResponseFields` is absent, so
+ * `updateDoc` cannot be handed one, whatever a compromised client does.
+ *
+ * `partySize` in particular: it is absent, so a save cannot move it, which is what
+ * makes the seat guard in the rules (`seatCountStaysValid`) a pure invariant rather
+ * than something a caller could satisfy by moving the number it is checking.
+ */
+export interface HouseholdEdit {
+	householdName: string;
+	side: Side;
+	seatsAllocated: number;
+	contactEmail: string | null;
+	notes: string;
+
+	/** Archive rather than delete. Reversible, and a printed code keeps resolving. */
+	active: boolean;
+}
+
+/**
  * What the dashboard needs from storage.
  *
- * `loadAll`, `create`, and `setMessage`. Editing a household generally is still
- * to come, and is a genuinely harder problem than either of those — see
- * `setMessage` for why one field turned out to be tractable.
+ * `loadAll`, `create`, `update` and `setMessage`.
+ *
+ * `update` and `setMessage` are kept apart on purpose. The wording is the couple's
+ * own prose, edited from the invitation panel with a live preview, and it has its own
+ * button and its own error message. Folding it into `update` would mean saving a
+ * household six fields to change one of them, which is both a wider write than the
+ * rules were widened for and a worse answer when the save fails.
  */
 export interface GuestListBackend {
 	/**
@@ -78,31 +113,48 @@ export interface GuestListBackend {
 	create(household: NewHousehold): Promise<CreatedHousehold>;
 
 	/**
+	 * Rewrites one household's owner fields.
+	 *
+	 * The whole of `HouseholdEdit` in one write, which is why the interface is a
+	 * closed shape rather than a patch: the deployed admin arm of `allow update` is
+	 * `onlyAdminFieldsChanged()`, a `hasOnly` over exactly these six keys plus
+	 * `customMessage` and `updatedAt`, so a write naming anything else is refused
+	 * whole. Widening one without the other gives a button the rules refuse; widening
+	 * this without the other gives a rule that permits something the app never sends.
+	 *
+	 * The hazard this had to be built around is `seatsAllocated`. Lowering it under a
+	 * confirmed `partySize` produces a document that fails `isWellFormed()`, and the
+	 * household's next RSVP fails the same check — permanently, since they cannot
+	 * lower their own `partySize` and the rules refuse the guest arm for it anyway.
+	 *
+	 * So the guard is in the deployed rules, not here: `seatCountStaysValid()` on the
+	 * admin arm requires `partySize <= seatsAllocated`, which is what makes the
+	 * over-committed document unreachable from any browser rather than merely from
+	 * this one. `validateHouseholdEdit` repeats it so the couple is told before the
+	 * round trip, but the client is the courtesy and the rules are the guard — the
+	 * same relationship `setMessage` has with `onlyResponseFieldsChanged()`.
+	 *
+	 * The guard blocks creating a violation without blocking the repair: an existing
+	 * one is `partySize > seatsAllocated`, the only fix is raising `seatsAllocated`,
+	 * and raising always satisfies the guard. A household left over-committed by an
+	 * earlier ruleset stays fixable from the dashboard.
+	 *
+	 * Throws `AdminWriteRefusedError` when the rules refuse the write — see the
+	 * note on that class.
+	 */
+	update(code: string, edit: HouseholdEdit): Promise<void>;
+
+	/**
 	 * Rewrites one household's invitation wording. Empty string means the shared
 	 * template.
 	 *
-	 * Deliberately the *only* editable field, and the reason this is safe at all.
+	 * A string the rules have no opinion about — it is not in `isWellFormed()`, not
+	 * in the seat cap, and not in `onlyResponseFieldsChanged()`, because it is an
+	 * owner field a guest may never write. So a write touching nothing but
+	 * `customMessage` and `updatedAt` cannot fail any check.
 	 *
-	 * Editing `seatsAllocated` is the hazard the rest of this file has been written
-	 * around: lowering it under a confirmed `partySize` produces a document that
-	 * fails `isWellFormed()`, which locks that household out of its own RSVP with
-	 * no repair path. Every other owner field is either arithmetic (`seats`) or
-	 * structural (`householdName`, `side`, `active`).
-	 *
-	 * `customMessage` is a string the rules have no opinion about — it is not in
-	 * `isWellFormed()`, not in the seat cap, and not in `onlyResponseFieldsChanged()`,
-	 * because it is an owner field a guest may never write. So a write that touches
-	 * nothing but `customMessage` and `updatedAt` cannot produce a document that
-	 * fails any check. The hazard is designed out rather than validated around,
-	 * which is also why the method takes one field rather than a patch object.
-	 *
-	 * The deployed rules agree, and are the backstop rather than the client: the
-	 * admin arm of `allow update` is `onlyAdminFieldsChanged()`, a `hasOnly` over
-	 * exactly those two keys. So the over-committed document is unreachable from a
-	 * browser even by a client other than this one. Do not widen that list without
-	 * widening this interface, and do not add `customMessage` to
-	 * `onlyResponseFieldsChanged()` — that would let any guest with a valid code
-	 * rewrite the invitation addressed to them.
+	 * Never add `customMessage` to `onlyResponseFieldsChanged()`. That would let any
+	 * guest with a valid code rewrite the invitation addressed to them.
 	 *
 	 * Throws `AdminWriteRefusedError` when the rules refuse the write — see the
 	 * note on that class.
@@ -134,6 +186,32 @@ export class AdminCodeTakenError extends Error {}
 export class AdminWriteRefusedError extends Error {}
 
 /**
+ * A save would take a household's seats below who has already said they are coming.
+ *
+ * Its own class, and the only one that is the client's opinion rather than the
+ * rules' — the rules refuse the same write as a plain `permission-denied`, so this is
+ * the brief window before they see it, where the couple can be told what the number
+ * actually is.
+ *
+ * Named rather than folded into `AdminWriteRefusedError` because the two mean
+ * opposite things: that one says "the ruleset is not what this code expects", this
+ * one says "the answer here is no, and here is why". Telling a couple their
+ * deployed ruleset is wrong when the truth is that they cannot reduce a party of
+ * four to two sends them to the wrong half of the console.
+ */
+export class AdminSeatsBelowConfirmedError extends Error {
+	constructor(
+		readonly seatsAllocated: number,
+		readonly partySize: number
+	) {
+		super(
+			`${partySize} seat${partySize === 1 ? '' : 's'} are already confirmed for this ` +
+				`household, so their allocation cannot go below that. Raise it to ${partySize} or more.`
+		);
+	}
+}
+
+/**
  * Shown when the rules refuse the collection.
  *
  * Deliberately not phrased as "you are not an admin". A rules file that never
@@ -159,12 +237,23 @@ export function describeGuestError(error: unknown): string {
 		return 'That code is already in use by another household. Check it, or leave the code blank and we will generate one.';
 	}
 
+	// Before the generic failure, and before `AdminWriteRefusedError` for the same
+	// reason that one is: the couple can already see this household and how many
+	// seats it has confirmed, so the useful thing to say is the number rather than
+	// anything about the ruleset. The class's own message carries both counts.
+	if (error instanceof AdminSeatsBelowConfirmedError) return error.message;
+
 	// Before the generic permission failure, and worded as what it is: this account
 	// can read the guest list — it is on screen — so "not on the admin list" would
-	// send the couple looking at the wrong half of the ruleset. It names the two
-	// keys to check, because the near-miss is a `hasOnly` that lists one of them.
+	// send the couple looking at the wrong half of the ruleset. It names the keys to
+	// check, because the near-miss is a `hasOnly` that lists one of them short.
 	if (error instanceof AdminWriteRefusedError) {
-		return 'The rules let this account read the guest list but not change it. Check that the admin arm of the deployed `allow update` is gated on onlyAdminFieldsChanged() allowing both customMessage and updatedAt.';
+		return (
+			'The rules let this account read the guest list but not change it. Check that the ' +
+			'admin arm of the deployed `allow update` is gated on onlyAdminFieldsChanged() ' +
+			'allowing householdName, side, seatsAllocated, contactEmail, notes, active, ' +
+			'customMessage and updatedAt.'
+		);
 	}
 
 	if (error instanceof AdminDatabaseMissingError) {

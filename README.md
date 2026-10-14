@@ -80,20 +80,31 @@ entirely. Set it per household from `/admin`, or per row in the spreadsheet's
 `invitation` column. The link is re-attached if their wording omits it, so
 nobody can be sent an invitation they cannot open.
 
-The dashboard's save is the **only** write an admin can make, and it touches
-**only** `customMessage`. That is deliberate rather than narrow for its own sake:
-lowering `seatsAllocated` under a confirmed `partySize` produces a document that
-fails `isWellFormed()` and locks that household out of its own RSVP with no
-repair path. Restricting the interface to a field the rules have no opinion about
-means the dashboard cannot produce that document at all — there is no validation
-to forget.
+The dashboard can write a household's **own** fields — `householdName`,
+`seatsAllocated`, `side`, `contactEmail`, `notes`, `active` — and its
+`customMessage`. It cannot write a guest's answer: `status`, `partySize`,
+`attendeeNames`, `message` and `respondedAt` are not reachable from
+`HouseholdEdit`, so there is no path through the interface that could move
+them.
+
+That split is the safety property, and it is a property of the shape rather
+than of validation to remember. Lowering `seatsAllocated` under a confirmed
+`partySize` produces a document that fails `isWellFormed()` and locks that
+household out of its own RSVP — they cannot lower their own `partySize` to
+escape it, so there is no route back. The dashboard refuses the edit, and so
+do the deployed rules, which is what makes it true for any client rather than
+only this one.
 
 The deployed ruleset says the same thing independently, which is what makes it
 a backstop rather than a convention: the admin arm of `allow update` is a
-`hasOnly` over `customMessage` and `updatedAt`. That grant used to be a bare
+`hasOnly` over those seven fields and `updatedAt`. That grant used to be a bare
 `isWeddingAdmin() ||`, which permitted the lockout above and a `setDoc` that
 would erase a guest's answer. See `scripts/README.md` for what it permits now,
 and what to never add to it.
+
+Raising a household's seats is never refused. An over-committed document is
+fixed by raising the allocation to meet it, so the guard blocks creating the
+problem without blocking the repair.
 
 ### Firestore rules live in the console
 
@@ -115,12 +126,17 @@ Two consequences worth knowing before you change anything:
   in their token. The client deliberately never checks a claim — authorisation
   arrives as a `PERMISSION_DENIED` on the collection load.
 
-Seeding the guest list, generating the codes, and producing the messages to send:
+Households are created and edited from `/admin`, which is the working surface for
+the guest list. Importing a spreadsheet — a first seed, or a restore — goes
+through the seed script, which rewrites every household's own fields and so needs
+saying so out loud:
 
 ```sh
-pnpm seed --dry-run
-pnpm seed
+pnpm seed --import --dry-run
+pnpm seed --import
 ```
+
+See `scripts/README.md` for the columns and what the flag is protecting.
 
 Two things to keep in step by hand, because nothing enforces it — the rules
 cannot read the config file, and the config file cannot read the rules:

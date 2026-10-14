@@ -3,6 +3,7 @@
 	import type { AdminRow } from './row';
 	import { copyText } from './clipboard';
 	import { formatTimestamp } from './format';
+	import HouseholdEditor from './HouseholdEditor.svelte';
 	import LongText from './LongText.svelte';
 	import MessageEditor from './MessageEditor.svelte';
 	import type { GuestList } from './guests.svelte';
@@ -25,7 +26,20 @@
 
 	const SITE = $derived(page.url.origin);
 
-	let editing = $state(false);
+	/**
+	 * Which panel the couple is looking at, if any.
+	 *
+	 * One value rather than a boolean per editor, because the two are mutually
+	 * exclusive and independent booleans could both be true — two forms in one
+	 * full-width panel, each holding its own draft, and a Save that silently commits
+	 * whichever was mounted last.
+	 *
+	 * A string rather than an enum so the two editors can keep their own names for
+	 * what they are, and the `{#if}` reads as the panel it is showing.
+	 */
+	type Panel = 'none' | 'details' | 'message';
+
+	let panel = $state<Panel>('none');
 
 	const LABEL = 'font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase';
 	const MUTED = 'font-body text-[11px] text-ink/50';
@@ -102,8 +116,15 @@
 	scanning, and those stay in the row itself.
 -->
 <div class="flex flex-col gap-5 px-4 py-4">
-	{#if editing && list}
-		<MessageEditor {household} {list} site={SITE} onclose={() => (editing = false)} />
+	{#if panel === 'details' && list}
+		<HouseholdEditor {household} {list} onclose={() => (panel = 'none')} />
+	{:else if panel === 'message' && list}
+		<MessageEditor
+			{household}
+			{list}
+			site={SITE}
+			onclose={() => (panel = 'none')}
+		/>
 	{:else}
 		{#if household.customMessage}
 			<LongText label="Their invitation, in your own words" text={household.customMessage} />
@@ -183,15 +204,29 @@
 
 			<!--
 				Gated on `list`, because without one there is nowhere to save. The
-				deployed rules scope the admin arm of `allow update` to
-				`customMessage` and `updatedAt`, so this write is permitted — but a
-				refusal is still possible if that list and this interface ever
-				diverge. See `AdminWriteRefusedError`.
+				deployed rules scope the admin arm of `allow update` to the owner
+				fields and `updatedAt`, so these writes are permitted — but a refusal
+				is still possible if that list and `GuestListBackend` ever diverge. See
+				`AdminWriteRefusedError`.
+
+				"Send this back to the shared template" is only offered where there is
+				a custom message to revert, which is what the label checks: with none
+				set, clearing the box would be indistinguishable from having never
+				opened it.
 			-->
 			{#if list}
 				<button
 					type="button"
-					onclick={() => (editing = true)}
+					onclick={() => (panel = 'details')}
+					class={ACTION}
+					aria-label="Edit {household.householdName}"
+				>
+					Edit household
+				</button>
+
+				<button
+					type="button"
+					onclick={() => (panel = 'message')}
 					class={ACTION}
 					aria-label="Write a different invitation for {household.householdName}"
 				>

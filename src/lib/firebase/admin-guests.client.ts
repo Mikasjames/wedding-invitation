@@ -3,6 +3,7 @@ import { databaseId, getApp, isConfigured } from './app';
 import {
 	AdminCodeTakenError,
 	AdminDeniedError,
+	AdminSeatsBelowConfirmedError,
 	AdminWriteRefusedError,
 	classifyGuestError,
 	type CreatedHousehold,
@@ -11,6 +12,23 @@ import {
 import { newHousehold } from '../rsvp/guests';
 import { generateCode } from '../rsvp/codes';
 import { readAdminRow } from '../admin/row';
+
+/**
+ * A refused admin write, told apart from a refused read.
+ *
+ * A read-only ruleset refuses an `update` as `permission-denied`, exactly as it
+ * refuses a `list` for an account that is not an admin. Those two mean opposite
+ * things here — one is "you are not an admin", the other is "there is no rule
+ * allowing admins to write" — and the dashboard can tell them apart because it has
+ * just read the collection successfully.
+ */
+function adminWriteError(error: unknown): Error {
+	const classified = classifyGuestError(error);
+
+	return classified instanceof AdminDeniedError
+		? new AdminWriteRefusedError(classified.message)
+		: classified;
+}
 
 /**
  * Firestore binding for the dashboard.
@@ -98,6 +116,34 @@ export async function getGuestListBackend(): Promise<GuestListBackend | null> {
 			}
 		},
 
+		async update(code, edit) {
+			const [app, firestore] = await Promise.all([getApp(), import('firebase/firestore')]);
+
+			const db = firestore.getFirestore(app, databaseId);
+
+			try {
+				// `updateDoc`, never `setDoc`, and named fields only.
+				//
+				// `setDoc` without a merge replaces the whole document — it would erase
+				// the guest's answer along with every field this call site happened to
+				// know. Naming the fields is the whole safety property: the list is
+				// exactly `HouseholdEdit`'s six keys, none of `ResponseFields` is
+				// reachable from it, and `partySize` is not among them, so this call
+				// cannot move the number the seat guard in the rules checks.
+				await firestore.updateDoc(firestore.doc(db, 'rsvps', code), {
+					householdName: edit.householdName,
+					side: edit.side,
+					seatsAllocated: edit.seatsAllocated,
+					contactEmail: edit.contactEmail,
+					notes: edit.notes,
+					active: edit.active,
+					updatedAt: firestore.serverTimestamp()
+				});
+			} catch (error) {
+				throw adminWriteError(error);
+			}
+		},
+
 		async setMessage(code, customMessage) {
 			const [app, firestore] = await Promise.all([getApp(), import('firebase/firestore')]);
 
@@ -116,16 +162,7 @@ export async function getGuestListBackend(): Promise<GuestListBackend | null> {
 					updatedAt: firestore.serverTimestamp()
 				});
 			} catch (error) {
-				const classified = classifyGuestError(error);
-
-				// A read-only ruleset refuses an `update` as `permission-denied`, exactly
-				// as it refuses a `list` for an account that is not an admin. Those two
-				// mean opposite things here — one is "you are not an admin", the other is
-				// "there is no rule allowing admins to write" — and the dashboard can
-				// tell them apart because it has just read the collection successfully.
-				throw classified instanceof AdminDeniedError
-					? new AdminWriteRefusedError(classified.message)
-					: classified;
+				throw adminWriteError(error);
 			}
 		}
 	};

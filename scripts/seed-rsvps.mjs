@@ -30,6 +30,44 @@ const OUTPUT = resolve(ROOT, 'out/links.csv');
 const CNAME = resolve(ROOT, 'static/CNAME');
 
 const DRY_RUN = process.argv.includes('--dry-run');
+const IMPORT = process.argv.includes('--import');
+
+/**
+ * Whether the dashboard or the spreadsheet owns a household's own fields.
+ *
+ * The dashboard, now. `HouseholdEditor` edits `householdName`, `seatsAllocated`,
+ * `side`, `contactEmail`, `notes` and `active` from `/admin`, and this script
+ * rewrites every one of those on every run — `documentFor()` returns
+ * `ownerFields(guest)` for documents that already exist, and the batch writes with
+ * `merge: true`, which overwrites exactly those keys and leaves the rest.
+ *
+ * So this is no longer "safe, and intended". Re-running it to add one household
+ * would revert every edit made from the dashboard since the last run, silently, with
+ * nothing in the output to say so. That is a worse failure than the half-seeded list
+ * this script spends so much care avoiding.
+ *
+ * Hence the flag. `--import` says "I know this overwrites the dashboard, do it
+ * anyway", which is what a deliberate bulk import or a restore from a spreadsheet
+ * actually is. Anything else exits having touched nothing.
+ *
+ * Placed before anything else — in particular before `SITE` below, which is a
+ * top-level await and would otherwise fail first on a missing `static/CNAME`, giving
+ * a baffling error for a command that was never going to run.
+ */
+if (!IMPORT) {
+	console.error(
+		'\n  pnpm seed is now an import, and needs --import.\n\n' +
+			'  Households are created and edited from the dashboard at /admin. This script\n' +
+			'  rewrites householdName, seatsAllocated, side, contactEmail, notes and active\n' +
+			'  for every row in data/guests.csv, so running it without --import would\n' +
+			'  quietly undo every change made there since the last run.\n\n' +
+			'  To import a spreadsheet — a first seed, or a restore — run:\n\n' +
+			'      pnpm seed --import\n\n' +
+			'  Preview it first with --dry-run, which writes nothing:\n\n' +
+			'      pnpm seed --import --dry-run\n'
+	);
+	process.exit(1);
+}
 
 /**
  * Where the couple sends links.

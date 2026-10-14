@@ -29,10 +29,14 @@ export interface GuestSeed {
 	 *
 	 * Archived rather than deleted, because a code may already be printed on paper
 	 * and in sent messages — the link has to keep resolving to something that makes
-	 * sense. It must live in the spreadsheet rather than only in the console,
-	 * because the seed writes `active` on every run: a household archived by hand
-	 * would otherwise be switched back on by the next `pnpm seed`, and the guest's
-	 * code would resume working without anyone deciding that it should.
+	 * sense. It is here for the dashboard's benefit as much as the seed's: with
+	 * `HouseholdEditor`, `active` is now set from `/admin`, and a field the seed
+	 * also writes is a field with two sources of truth.
+	 *
+	 * That is the cost of this column existing, and the reason `pnpm seed` now
+	 * needs `--import`: an import silently re-invites anyone archived in the
+	 * dashboard, and the guest's code resumes working without anyone deciding that it
+	 * should. Set `active` to `no` in the spreadsheet too, or do not run it.
 	 */
 	active: boolean;
 }

@@ -4,6 +4,7 @@ import {
 	describeGuestError,
 	type CreatedHousehold,
 	type GuestListBackend,
+	type HouseholdEdit,
 	type NewHousehold
 } from './guests.driver';
 import {
@@ -59,6 +60,12 @@ export class GuestList {
 
 	/** Why the last message save failed. Separate from `createError` for the same reason. */
 	messageError = $state<string | null>(null);
+
+	/** A household's own fields are being saved. */
+	savingEdit = $state(false);
+
+	/** Why the last household save failed. Separate again, for the same reason. */
+	editError = $state<string | null>(null);
 
 	/**
 	 * The household just created, kept so the page can show something sendable.
@@ -272,6 +279,8 @@ export class GuestList {
 		this.lastCreated = null;
 		this.refreshError = null;
 		this.messageError = null;
+		this.editError = null;
+		this.savingEdit = false;
 		this.refreshing = false;
 	}
 
@@ -328,6 +337,50 @@ export class GuestList {
 
 	/** For the page's "not on the admin list" wording. */
 	static readonly accessDenied = ACCESS_DENIED;
+
+	/**
+	 * Saves one household's own fields, then re-reads the list.
+	 *
+	 * Reports through its own error and leaves `phase` alone, for the same reason
+	 * `createError` does: a refused edit says nothing about whether the guest list
+	 * still loads, and replacing a working dashboard with "not on the admin list"
+	 * because one save was refused would be both alarming and wrong.
+	 *
+	 * Re-reads rather than patching the row in place, as `create` does. `totals` is
+	 * `$derived` from the rows, so a hand-applied edit is another place the dashboard
+	 * can disagree with the server — and `updatedAt` is the other reason, since a
+	 * local row would keep showing the old one. Deliberately `#reRead` and not
+	 * `refresh()`: a click on the refresh button must not be able to cancel this.
+	 */
+	async update(code: string, edit: HouseholdEdit): Promise<boolean> {
+		// Checked before the first await, or two rapid saves both pass the guard and
+		// the second is the one that lands.
+		if (this.savingEdit) return false;
+
+		this.savingEdit = true;
+		this.editError = null;
+
+		try {
+			const backend = await this.#getBackend();
+
+			if (!backend) {
+				this.editError = 'Firestore is not configured for this build.';
+				return false;
+			}
+
+			await backend.update(code, edit);
+
+			await this.#reRead();
+
+			return true;
+		} catch (error) {
+			this.editError = describeGuestError(error);
+
+			return false;
+		} finally {
+			this.savingEdit = false;
+		}
+	}
 
 	/**
 	 * Saves one household's invitation wording, then re-reads the list.
