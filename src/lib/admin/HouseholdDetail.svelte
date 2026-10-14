@@ -202,8 +202,10 @@
 
 			<!--
 				Gated on `list`, because without one there is nowhere to save. The
-				deployed ruleset has no admin write branch yet, so this is the first
-				thing to fail if it has not been added — see `AdminWriteRefusedError`.
+				deployed rules scope the admin arm of `allow update` to
+				`customMessage` and `updatedAt`, so this write is permitted — but a
+				refusal is still possible if that list and this interface ever
+				diverge. See `AdminWriteRefusedError`.
 			-->
 			{#if list}
 				<button

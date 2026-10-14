@@ -86,8 +86,14 @@ lowering `seatsAllocated` under a confirmed `partySize` produces a document that
 fails `isWellFormed()` and locks that household out of its own RSVP with no
 repair path. Restricting the interface to a field the rules have no opinion about
 means the dashboard cannot produce that document at all — there is no validation
-to forget. See `scripts/README.md` for the rules branch it needs, which is a
-manual step in the console.
+to forget.
+
+The deployed ruleset says the same thing independently, which is what makes it
+a backstop rather than a convention: the admin arm of `allow update` is a
+`hasOnly` over `customMessage` and `updatedAt`. That grant used to be a bare
+`isWeddingAdmin() ||`, which permitted the lockout above and a `setDoc` that
+would erase a guest's answer. See `scripts/README.md` for what it permits now,
+and what to never add to it.
 
 ### Firestore rules live in the console
 

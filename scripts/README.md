@@ -40,9 +40,8 @@ write or leave out. There is a 2,000 character limit, the same one the dashboard
 enforces.
 
 The same wording can be written per household from `/admin` instead, which is
-easier than editing a spreadsheet and does not need a service-account key — but
-that path needs the deployed ruleset to have an admin write branch, which is a
-manual step in the console. See step 3.
+easier than editing a spreadsheet and does not need a service-account key. That
+path needs the deployed ruleset to scope its admin `update` grant — see step 3.
 
 `active` is the column to reach for when a household has to come off the list
 after the messages have gone out. Their code keeps resolving rather than
@@ -85,33 +84,59 @@ Seeding into a database whose rules are the permissive Firestore-console default
 means every guest document is world-readable until the real rules land. Set the
 rules before the first seed, not after.
 
-### The admin write branch, if you want to edit from the dashboard
+### What an admin is allowed to write
 
-The dashboard reads the collection with a `list` grant. Writing a household's own
-invitation wording back needs an `update` grant the deployed ruleset does not
-currently have — so **"Write their invitation" fails with a permission error
-until you add this**, by hand, in the console:
+The dashboard reads the collection with `list`, and writes one field back. The
+admin arm of `allow update` is scoped to exactly that:
 
 ```js
-match /rsvps/{code} {
-  allow update: if isWeddingAdmin()
-    && request.resource.data.diff(resource.data).affectedKeys()
-         .hasOnly(['customMessage', 'updatedAt']);
+function onlyAdminFieldsChanged() {
+  return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+    'customMessage', 'updatedAt'
+  ]);
 }
+
+allow update: if (
+  isWeddingAdmin() && onlyAdminFieldsChanged()
+) || (
+  isKnownCode()
+  && resource.data.active == true
+  && onlyResponseFieldsChanged()
+  && isWellFormed()
+  && isBeforeCutoff()
+);
 ```
 
-Read it back and check what you are looking at. Three things matter:
+This used to be a bare `isWeddingAdmin() ||` on the `update` line, which granted
+an admin **every** field. Nothing in the app used that, but the rules permitted
+it, and it permitted two outcomes with no repair path:
 
-- `hasOnly` and not `hasAll`. Without it this grants any admin write at all,
-  including lowering `seatsAllocated` under a confirmed `partySize` — which
-  produces a document that fails `isWellFormed()` and locks that household out of
-  its own RSVP with no repair path. That is why the dashboard only ever offers to
-  write this one field.
-- `request.resource.data`, so it is checked against the incoming document rather
-  than the stored one.
-- Added to the existing `match /rsvps/{code}` block if there is one, not as a
-  second one. Firestore allows at most one `match` per path; a duplicate silently
-  does nothing and the refusal comes back looking like a bug.
+- Lowering `seatsAllocated` under a confirmed `partySize`. The document then
+  fails `isWellFormed()`, which locks that household out of its own RSVP
+  permanently — their next RSVP hits the same check and can never succeed again.
+- `setDoc` without a merge, which replaces the document and takes a guest's
+  answer with it, silently.
+
+The rules are the backstop here, not the client. `GuestListBackend` offers no
+other edit for the same reason, but that is a property of *this* code; a stale
+tab, a hand-rolled client, or a compromised account on the admin list would not
+have been stopped by it. Manual fixes in the Firebase console are unaffected —
+the console authenticates with owner credentials that bypass rules entirely, so
+genuinely repairing a household by hand is still possible.
+
+Three things matter if you ever edit this:
+
+- **`hasOnly`, never `hasAll`.** Without it the grant is unrestricted again.
+- **`request.resource.data`**, so it is checked against the incoming document
+  rather than the stored one.
+- **Never add `customMessage` to `onlyResponseFieldsChanged()`.** That function
+  is the *guest's* grant. Listing it there would let anyone holding a valid code
+  rewrite the invitation addressed to them. It is absent on purpose.
+
+Widen `onlyAdminFieldsChanged()` only alongside `GuestListBackend` — one without
+the other means a rule that permits something the app never sends, or a button
+the rules refuse. A mismatch surfaces as a permission error on the save and
+nothing else, which is why `AdminWriteRefusedError` exists and says so.
 
 ### Do not deploy rules from here
 

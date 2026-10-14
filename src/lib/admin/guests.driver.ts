@@ -81,8 +81,16 @@ export interface GuestListBackend {
 	 * fails any check. The hazard is designed out rather than validated around,
 	 * which is also why the method takes one field rather than a patch object.
 	 *
-	 * Throws `AdminWriteRefusedError` when the deployed ruleset has no admin write
-	 * branch — see the note on that class.
+	 * The deployed rules agree, and are the backstop rather than the client: the
+	 * admin arm of `allow update` is `onlyAdminFieldsChanged()`, a `hasOnly` over
+	 * exactly those two keys. So the over-committed document is unreachable from a
+	 * browser even by a client other than this one. Do not widen that list without
+	 * widening this interface, and do not add `customMessage` to
+	 * `onlyResponseFieldsChanged()` — that would let any guest with a valid code
+	 * rewrite the invitation addressed to them.
+	 *
+	 * Throws `AdminWriteRefusedError` when the rules refuse the write — see the
+	 * note on that class.
 	 */
 	setMessage(code: string, customMessage: string): Promise<void>;
 }
@@ -99,12 +107,14 @@ export class AdminCodeTakenError extends Error {}
  * The rules allowed the read but refused the write.
  *
  * Its own class because the generic `AdminDeniedError` message is actively wrong
- * here. That one says the account is not on the admin list and points at the
- * `list` grant — and an account that can read the collection perfectly well is
- * exactly what reaches this. The deployed ruleset has an admin *read* branch and
- * no admin *write* branch, so the truthful explanation is "the rules have no
- * rule permitting this write", and the fix is a different line of the ruleset
- * from the one the other message names.
+ * here. That one says the account is not on the admin list — and an account that
+ * has just read the whole collection on screen is exactly what reaches this.
+ *
+ * The admin arm of `allow update` is a `hasOnly` over `customMessage` and
+ * `updatedAt`, so "reads fine, writes refused" is a real and reachable state
+ * rather than a theoretical one: it is what a `hasOnly(['customMessage'])` that
+ * forgot `updatedAt` looks like, and what widening this interface without
+ * widening that list would look like. The message names the fix either way.
  */
 export class AdminWriteRefusedError extends Error {}
 
@@ -136,9 +146,10 @@ export function describeGuestError(error: unknown): string {
 
 	// Before the generic permission failure, and worded as what it is: this account
 	// can read the guest list — it is on screen — so "not on the admin list" would
-	// send the couple looking at the wrong half of the ruleset.
+	// send the couple looking at the wrong half of the ruleset. It names the two
+	// keys to check, because the near-miss is a `hasOnly` that lists one of them.
 	if (error instanceof AdminWriteRefusedError) {
-		return 'The deployed Firestore rules let this account read the guest list but not change it. The ruleset has an admin read branch and no admin write branch; adding one is a manual step in the Firebase console.';
+		return 'The rules let this account read the guest list but not change it. Check that the admin arm of the deployed `allow update` is gated on onlyAdminFieldsChanged() allowing both customMessage and updatedAt.';
 	}
 
 	if (error instanceof AdminDatabaseMissingError) {

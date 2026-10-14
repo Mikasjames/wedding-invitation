@@ -300,8 +300,9 @@ export class GuestList {
 
 			return true;
 		} catch (error) {
-			// `describeGuestError` already carries a message specific to a ruleset
-			// with no admin write branch, which is the failure this most likely hits.
+			// `describeGuestError` already carries a message specific to a write the
+			// rules refused, which is the failure this can hit: the admin arm of
+			// `allow update` is a `hasOnly` over exactly two keys.
 			this.messageError = describeGuestError(error);
 
 			return false;

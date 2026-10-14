@@ -628,9 +628,9 @@ describe('GuestList.setMessage', () => {
 		expect(list.messageError).toBeNull();
 	});
 
-	// The failure this most likely hits: the deployed ruleset has an admin read
-	// branch and no admin write branch, so `permission-denied` arrives from an
-	// account that can plainly read the list.
+	// Reachable rather than theoretical: the admin arm of the deployed `allow
+	// update` is a `hasOnly` over exactly two keys, so "reads fine, writes
+	// refused" arrives from an account that can plainly read the list.
 	it('explains a refused write without demoting the list', async () => {
 		const { list } = setup({
 			...backend(),
@@ -643,7 +643,12 @@ describe('GuestList.setMessage', () => {
 		const before = list.rows;
 
 		expect(await list.setMessage('BBBB00000001', 'Do come.')).toBe(false);
-		expect(list.messageError).toContain('Firebase console');
+		// Names both keys, because the near-miss is a `hasOnly` listing one of
+		// them, and it must not claim the account is off the admin list — it has
+		// just read the list.
+		expect(list.messageError).toContain('customMessage');
+		expect(list.messageError).toContain('updatedAt');
+		expect(list.messageError).not.toContain('not on the admin list');
 		// The rows and the phase are untouched: a refused write says nothing about
 		// whether the guest list still loads.
 		expect(list.phase).toBe('ready');
