@@ -3,6 +3,8 @@
 	import AddHousehold from '$lib/admin/AddHousehold.svelte';
 	import AdminPanel from '$lib/admin/AdminPanel.svelte';
 	import AdminStat from '$lib/admin/AdminStat.svelte';
+	import HouseholdBadges from '$lib/admin/HouseholdBadges.svelte';
+	import HouseholdDetail from '$lib/admin/HouseholdDetail.svelte';
 	import { AdminSession } from '$lib/admin/auth.svelte';
 	import { GuestList } from '$lib/admin/guests.svelte';
 	import { ACCESS_DENIED } from '$lib/admin/guests.driver';
@@ -15,6 +17,23 @@
 
 	const BUTTON_CLASS =
 		'rounded-full border border-gold/30 bg-plum px-6 py-3 font-body text-[11px] font-medium tracking-[0.28em] text-champagne uppercase transition hover:opacity-90';
+
+	/**
+	 * Alignment declared per column, rather than derived from the index.
+	 *
+	 * This was `i > 2 && i < 5`, which is right for exactly six columns in
+	 * exactly this order and silently wrong the moment a column is added — a
+	 * header stops lining up with its figures and nothing fails a build. A column
+	 * that says where its own numbers go cannot do that.
+	 */
+	const COLUMNS: ReadonlyArray<{ label: string; align?: 'right' }> = [
+		{ label: 'Household' },
+		{ label: 'Code' },
+		{ label: 'Side' },
+		{ label: 'Seats', align: 'right' },
+		{ label: 'Confirmed', align: 'right' },
+		{ label: 'Status' }
+	];
 
 	/**
 	 * `isAuthConfigured` rather than `isConfigured`: this page needs `authDomain`,
@@ -51,7 +70,14 @@
 	 * and a dashboard left open on a shared laptop should not leave one on screen.
 	 */
 	$effect(() => {
-		if (!auth.signedIn) adding = false;
+		if (!auth.signedIn) {
+			adding = false;
+
+			// `guests.clear()` already drops the rows, but leaving a code expanded
+			// would mean the next person to sign in lands on a detail panel for a
+			// household that is no longer on screen.
+			expandedCode = null;
+		}
 	});
 
 	/**
@@ -68,6 +94,20 @@
 	const t = $derived(guests.totals);
 
 	let adding = $state(false);
+
+	/**
+	 * The one household whose detail is open, or `null`.
+	 *
+	 * A single code rather than a `Set`. The detail is a full-width panel, two of
+	 * them open at once is a page of noise, and one at a time is the only shape
+	 * that still means something after a refresh — which is why the page owns this
+	 * rather than each row keeping its own flag.
+	 */
+	let expandedCode = $state<string | null>(null);
+
+	function toggle(code: string) {
+		expandedCode = expandedCode === code ? null : code;
+	}
 </script>
 
 <svelte:head>
@@ -237,40 +277,48 @@
 
 			<div class="overflow-x-auto rounded-2xl border border-gold/20">
 				<table class="w-full min-w-[42rem] border-collapse text-left">
+					<caption class="sr-only">
+						Every household on the guest list. Select a household's name to see who is
+						attending, any message left for the couple, and the invitation link.
+					</caption>
 					<thead>
 						<tr class="border-b border-gold/20">
-							{#each ['Household', 'Code', 'Side', 'Seats', 'Confirmed', 'Status'] as column, i (column)}
+							{#each COLUMNS as column (column.label)}
 								<th
+									scope="col"
 									class="px-4 py-3 font-body text-[10px] font-medium tracking-[0.28em] text-gold-deep uppercase
-										{i > 2 && i < 5 ? 'text-right' : ''}"
+										{column.align === 'right' ? 'text-right' : ''}"
 								>
-									{column}
+									{column.label}
 								</th>
 							{/each}
 						</tr>
 					</thead>
 					<tbody>
+						<!--
+							A row and its detail are both emitted per household rather than
+							split into two loops, so the detail cannot drift out of sync with
+							the row above it. `border-b-0` while open keeps the pair joined
+							instead of drawing a line through the middle of one household.
+						-->
 						{#each guests.rows as household (household.code)}
+							{@const open = expandedCode === household.code}
 							<tr
-								class="border-b border-gold/10 last:border-0 {household.active
-									? ''
-									: 'opacity-50'}"
+								class="border-b border-gold/10 {open
+									? 'border-b-0'
+									: 'last:border-0'} {household.active ? '' : 'opacity-50'}"
 							>
 								<td class="px-4 py-3 font-body text-sm text-ink">
-									{household.householdName}
-									{#if household.overcommitted}
-										<span
-											class="ml-2 rounded-full border border-oxblood/40 px-2 py-0.5 text-[9px] tracking-[0.18em] text-oxblood uppercase"
-											title="Confirmed more seats than they were allocated"
-										>
-											Over
-										</span>
-									{/if}
-									{#if !household.active}
-										<span class="ml-2 text-[9px] tracking-[0.18em] text-ink/40 uppercase">
-											Archived
-										</span>
-									{/if}
+									<button
+										type="button"
+										onclick={() => toggle(household.code)}
+										aria-expanded={open}
+										aria-controls="detail-{household.code}"
+										class="text-left underline-offset-4 hover:underline"
+									>
+										{household.householdName}
+									</button>
+									<HouseholdBadges {household} />
 								</td>
 								<td class="px-4 py-3 font-body text-xs tracking-[0.16em] text-ink/60">
 									{household.code}
@@ -286,6 +334,14 @@
 									{household.status}
 								</td>
 							</tr>
+
+							{#if open}
+								<tr id="detail-{household.code}" class="last:border-0">
+									<td colspan={COLUMNS.length} class="px-0 pb-4">
+										<HouseholdDetail {household} />
+									</td>
+								</tr>
+							{/if}
 						{/each}
 					</tbody>
 				</table>

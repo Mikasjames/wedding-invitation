@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { base } from '$app/paths';
 	import { page } from '$app/state';
 	import type { GuestList } from './guests.svelte';
 	import { type HouseholdProblems, validateHousehold } from './household-form';
+	import { copyText } from './clipboard';
 	import type { Side } from '$lib/rsvp/types';
-	import { invitationMessage } from '$lib/rsvp/message';
+	import { invitationLink, invitationMessage } from '$lib/rsvp/message';
 
 	interface Props {
 		list: GuestList;
@@ -83,22 +83,19 @@
 		copied = false;
 		copiedError = false;
 
-		try {
-			await navigator.clipboard.writeText(
-				invitationMessage({
-					household: created.householdName,
-					seats: created.seatsAllocated,
-					code: created.code,
-					site: SITE
-				})
-			);
-			copied = true;
-		} catch {
-			// Refused outside a secure context and on older Android WebViews. Showing
-			// the text is the fallback, which is what a paste into Messenger needs
-			// anyway.
-			copiedError = true;
-		}
+		// Shared with the household detail panel, so the refusal handling exists
+		// once rather than being copied into a second copy button later.
+		const ok = await copyText(
+			invitationMessage({
+				household: created.householdName,
+				seats: created.seatsAllocated,
+				code: created.code,
+				site: SITE
+			})
+		);
+
+		copied = ok;
+		copiedError = !ok;
 	}
 
 	const messageText = $derived(
@@ -112,7 +109,18 @@
 			: ''
 	);
 
-	const link = $derived(list.lastCreated ? `${SITE}${base}/?code=${list.lastCreated.code}` : '');
+	/**
+	 * Built by `invitationLink`, which is also what `invitationMessage` uses
+	 * internally.
+	 *
+	 * It was assembled here as `${SITE}${base}/?code=`, which happens to agree
+	 * because this deploys to a root domain and `base` is `''` — and disagrees the
+	 * moment it does not. Two builders for one link is how a receipt ends up
+	 * showing the couple a URL that the message beside it does not contain.
+	 */
+	const link = $derived(
+		list.lastCreated ? invitationLink(SITE, list.lastCreated.code) : ''
+	);
 
 	const FIELD =
 		'w-full rounded-full border border-gold/30 bg-ivory px-5 py-3 font-body text-sm text-ink placeholder:text-ink/40';
