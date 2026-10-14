@@ -83,10 +83,17 @@ test.describe('hero countdown', () => {
 
 		// Lowercase in the DOM: the small-caps look is a CSS `uppercase`, so
 		// asserting the capitalised form would be asserting the stylesheet.
-		// `exact` keeps these off the screen-reader sentence, which contains the
-		// same words.
-		for (const label of ['days', 'hours', 'minutes']) {
-			await expect(timer.getByText(label, { exact: true })).toBeVisible();
+		//
+		// `days?` rather than `days`, because `unit()` singularises a label whose
+		// value is exactly 1. Asserting the plural pinned this to the two days in
+		// every 24-hour window where no unit happens to read 1 — around an eighth of
+		// the time — and it failed the rest. Same shape as the sentence assertion
+		// below, which has always been plural-tolerant.
+		//
+		// Anchored, so these still do not match the screen-reader sentence, which
+		// contains all three words.
+		for (const label of [/^days?$/i, /^hours?$/i, /^minutes?$/i]) {
+			await expect(timer.getByText(label)).toBeVisible();
 		}
 	});
 
