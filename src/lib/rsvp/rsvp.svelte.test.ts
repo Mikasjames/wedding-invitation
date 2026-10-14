@@ -15,6 +15,7 @@ function household(overrides: Partial<Rsvp> = {}): Rsvp {
 		active: true,
 		contactEmail: null,
 		notes: '',
+		customMessage: '',
 		createdAt: null as never,
 		updatedAt: null as never,
 		status: 'pending',

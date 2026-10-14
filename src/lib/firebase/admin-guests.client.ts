@@ -70,7 +70,7 @@ export async function getGuestListBackend(): Promise<GuestListBackend | null> {
 						// The same shape `pnpm seed` writes, so a household added here
 						// behaves like every other one. `newHousehold` in particular
 						// carries `status: 'pending'`, which the deployed rules branch on.
-						...newHousehold({ ...household, active: true }),
+						...newHousehold({ ...household, active: true, customMessage: household.customMessage ?? '' }),
 						createdAt: firestore.serverTimestamp(),
 						updatedAt: firestore.serverTimestamp()
 					});

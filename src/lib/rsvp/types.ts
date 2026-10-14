@@ -49,6 +49,20 @@ export interface SeededFields {
 	/** Couple-internal. Never rendered to a guest. */
 	notes: string;
 
+	/**
+	 * This household's own invitation wording, replacing the shared template.
+	 *
+	 * Empty means the template in `wedding.ts`. Owned by the couple and written
+	 * only by them — a guest cannot change what an invitation says, so this is on
+	 * the owner side of the split above and must never appear in
+	 * `RESPONSE_FIELDS`.
+	 *
+	 * Note this is the *invitation to* the household. `ResponseFields.message` is
+	 * the note a household leaves *back*, and the two are unrelated despite the
+	 * similar name.
+	 */
+	customMessage: string;
+
 	createdAt: Timestamp;
 	updatedAt: Timestamp;
 }
@@ -120,6 +134,7 @@ export function readRsvp(data: Record<string, unknown> | undefined): Rsvp | null
 		active: true,
 		contactEmail: typeof data.contactEmail === 'string' ? data.contactEmail : null,
 		notes: typeof data.notes === 'string' ? data.notes : '',
+		customMessage: typeof data.customMessage === 'string' ? data.customMessage : '',
 		createdAt: data.createdAt as Timestamp,
 		updatedAt: data.updatedAt as Timestamp,
 

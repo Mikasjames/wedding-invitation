@@ -158,3 +158,30 @@ describe('sortRows', () => {
 		expect(rows.map((row) => row.code)).toEqual(before);
 	});
 });
+describe('customMessage', () => {
+	// The invitation *to* a household, which is not `message` — that is the note
+	// they leave back. Two fields, one screen, similar names, so the read is pinned
+	// separately rather than assumed.
+	it('reads the couple\'s wording and leaves the guest\'s note alone', () => {
+		const row = readAdminRow('W8K9JPTR4M', {
+			householdName: 'Santos',
+			seatsAllocated: 2,
+			active: true,
+			customMessage: 'It has been years.',
+			message: 'Congratulations!'
+		})!;
+
+		expect(row.customMessage).toBe('It has been years.');
+		expect(row.message).toBe('Congratulations!');
+	});
+
+	// Every document seeded before this field existed.
+	it('is empty rather than undefined when the document predates it', () => {
+		expect(readAdminRow('W8K9JPTR4M', { householdName: 'Santos' })?.customMessage).toBe('');
+	});
+
+	// The document came from the open internet.
+	it('is empty when the stored value is not a string', () => {
+		expect(readAdminRow('W8K9JPTR4M', { customMessage: { a: 1 } })?.customMessage).toBe('');
+	});
+});

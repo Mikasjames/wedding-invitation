@@ -22,6 +22,15 @@ export interface AdminRow {
 	/** Couple-internal, never shown to a guest. */
 	notes: string;
 
+	/**
+	 * This household's own invitation wording. Empty means the shared template.
+	 *
+	 * The invitation *to* them — not `message` below, which is the note they leave
+	 * *back*. Both are on one screen, so the distinction is stated rather than left
+	 * to the column heading.
+	 */
+	customMessage: string;
+
 	status: RsvpStatus;
 
 	/** As stored, even when it exceeds `seatsAllocated`. See `overcommitted`. */
@@ -105,6 +114,7 @@ export function readAdminRow(code: string, data: Record<string, unknown> | undef
 		active: data.active === true,
 		contactEmail: typeof data.contactEmail === 'string' && data.contactEmail ? data.contactEmail : null,
 		notes: toStr(data.notes),
+		customMessage: toStr(data.customMessage),
 		status,
 		partySize,
 		attendeeNames: Array.isArray(data.attendeeNames)

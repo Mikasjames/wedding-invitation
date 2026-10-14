@@ -17,7 +17,32 @@ columns are required:
 | `code` | no | Leave blank and one is generated. Supplying one yourself means it has to be exactly 10 characters of `0-9A-Z` minus `I L O U`. |
 | `email` | no | For the couple's reminder list. Never shown to a guest. |
 | `notes` | no | Couple-internal. Never shown to a guest. |
+| `invitation` | no | This household's own message, replacing the standard one. See below. |
 | `active` | no | `no` archives the household. Blank means still invited. |
+
+`invitation` holds the whole message a household receives, not a greeting or a
+sign-off — a partial one would have to guess at the rest. Blank, which is the
+ordinary case, means the shared message from `wedding.rsvp.invitation`. Inside it,
+these are filled in:
+
+| Token | Becomes |
+|---|---|
+| `{household}` | The household name. |
+| `{names}` | The couple. |
+| `{deadline}` | The reply-by date. |
+| `{link}` | The invitation link. |
+| `{code}` | Their code. |
+| `{seats}` | Their seats, with the noun — "4 seats", "1 seat". |
+
+The link is re-attached to the end if the message leaves it out, so no household
+can be sent an invitation they cannot open. Everything else is the couple's to
+write or leave out. There is a 2,000 character limit, the same one the dashboard
+enforces.
+
+The same wording can be written per household from `/admin` instead, which is
+easier than editing a spreadsheet and does not need a service-account key — but
+that path needs the deployed ruleset to have an admin write branch, which is a
+manual step in the console. See step 3.
 
 `active` is the column to reach for when a household has to come off the list
 after the messages have gone out. Their code keeps resolving rather than

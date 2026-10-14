@@ -2,6 +2,7 @@
 // `scripts/seed-rsvps.mjs`, which Node runs directly, and Node's ESM resolver
 // will not guess an extension. Vite and TypeScript both handle it either way.
 import { CODE_LENGTH, generateCode, normalizeCode } from './codes.ts';
+import { MAX_CUSTOM_MESSAGE } from './message.ts';
 import type { Side } from './types.ts';
 
 /** One row of `data/guests.csv`, after validation. */
@@ -14,6 +15,14 @@ export interface GuestSeed {
 	seatsAllocated: number;
 	contactEmail: string | null;
 	notes: string;
+
+	/**
+	 * This household's own invitation wording, replacing the shared template.
+	 *
+	 * Not `ResponseFields.message` — that is the note a household leaves *back*,
+	 * and having both on one screen is a trap. Blank means the template.
+	 */
+	customMessage: string;
 
 	/**
 	 * Whether the household is still invited.
@@ -37,7 +46,14 @@ const FALSY = new Set(['no', 'n', 'false', '0', 'archived', 'inactive']);
 
 /** The header the couple is given, and the two columns that are not optional. */
 export const REQUIRED_COLUMNS = ['household', 'seats'] as const;
-export const OPTIONAL_COLUMNS = ['side', 'code', 'email', 'notes', 'active'] as const;
+export const OPTIONAL_COLUMNS = [
+	'side',
+	'code',
+	'email',
+	'notes',
+	'invitation',
+	'active'
+] as const;
 
 /**
  * What a household document needs, narrowed from `GuestSeed`.
@@ -68,7 +84,8 @@ export function ownerFields(guest: HouseholdSeed) {
 		// literal would silently re-invite anyone archived in the console.
 		active: guest.active,
 		contactEmail: guest.contactEmail,
-		notes: guest.notes
+		notes: guest.notes,
+		customMessage: guest.customMessage
 	};
 }
 
@@ -256,6 +273,15 @@ export function validateGuests(rows: string[][]): {
 			else fail(`\`active\` is "${rawActive}" — use yes or no.`);
 		}
 
+		const customMessage = cells[at('invitation')] ?? '';
+
+		if (customMessage.length > MAX_CUSTOM_MESSAGE) {
+			fail(
+				`\`invitation\` is ${customMessage.length} characters — ` +
+					`keep a household's own wording under ${MAX_CUSTOM_MESSAGE}.`
+			);
+		}
+
 		guests.push({
 			line,
 			code,
@@ -264,6 +290,7 @@ export function validateGuests(rows: string[][]): {
 			seatsAllocated: seats,
 			contactEmail: rawEmail || null,
 			notes: cells[at('notes')] ?? '',
+			customMessage,
 			active
 		});
 	}

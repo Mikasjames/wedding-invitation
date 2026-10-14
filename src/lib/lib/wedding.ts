@@ -104,6 +104,30 @@ dressCode: {
 		deadline: '15 January 2027',
 
 		/**
+		 * The invitation message, one line per paragraph break.
+		 *
+		 * Moved out of `rsvp/message.ts` so the couple can reword the whole thing
+		 * without touching code, which is what every other piece of copy in this
+		 * file is for. `{...}` tokens are substituted with the household's own
+		 * details — `{household}`, `{names}`, `{deadline}`, `{link}`, `{code}` and
+		 * `{seats}` — and `{seats}` carries its noun, so "2 seats" and "1 seat" both
+		 * read correctly without the plural living in the copy.
+		 *
+		 * `deadline` above is a separate value because it is also the cutoff the
+		 * deployed ruleset enforces by hand; this is only what a guest is told.
+		 *
+		 * A household with its own message ignores all of this — see
+		 * `InvitationInput.custom`.
+		 */
+		invitation: {
+			greeting: 'Hi {household}!',
+			invitation: '{names} are getting married and would be honoured by your presence.',
+			deadline: 'Kindly reply by {deadline}.',
+			access: 'Your invitation: {link}',
+			code: 'Your code: {code} — {seats} reserved for you.'
+		},
+
+		/**
 		 * Where a guest goes when their code does not work — which will happen,
 		 * because codes are read off cards and typed on phones. Empty rather than
 		 * a placeholder mailbox, so the flow renders the name as plain text instead

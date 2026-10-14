@@ -16,6 +16,14 @@ export interface NewHousehold {
 	contactEmail: string | null;
 	notes: string;
 
+	/**
+	 * This household's own invitation wording. Blank means the shared template.
+	 *
+	 * Optional rather than required, because a household added without one is the
+	 * ordinary case — only a few have a reason to be worded differently.
+	 */
+	customMessage?: string;
+
 	/** Only when a card already carries this code. Generated when absent. */
 	code?: string;
 }

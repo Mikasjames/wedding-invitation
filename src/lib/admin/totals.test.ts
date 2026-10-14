@@ -12,6 +12,7 @@ function row(overrides: Partial<AdminRow> & { code?: string } = {}): AdminRow {
 		active: true,
 		contactEmail: null,
 		notes: '',
+		customMessage: '',
 		status: 'pending',
 		partySize: 0,
 		attendeeNames: [],

@@ -49,6 +49,7 @@ export function toCsv(rows: AdminRow[]): string {
 			'confirmed',
 			'names',
 			'message',
+			'invitation',
 			'email',
 			'notes',
 			'responded'
@@ -69,6 +70,10 @@ export function toCsv(rows: AdminRow[]): string {
 				// in a spreadsheet and survive `parseCsv`, which only splits on commas.
 				household.attendeeNames.join('; '),
 				household.message,
+				// The couple's own wording for this household. `invitation` rather than
+				// `message`, which is the note the household left *back* and sits two
+				// columns away. Re-seeding from an export round-trips this column.
+				household.customMessage,
 				household.contactEmail,
 				household.notes,
 				timestamp(household.respondedAt)

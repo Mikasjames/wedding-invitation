@@ -12,6 +12,7 @@ import {
 	summarise,
 	validateGuests
 } from './guests';
+import { MAX_CUSTOM_MESSAGE } from './message';
 import { RESPONSE_FIELDS } from './types';
 
 const HEADER = 'household,side,seats,code,email,notes';
@@ -70,7 +71,8 @@ describe('validateGuests', () => {
 			side: 'both',
 			seatsAllocated: 4,
 			contactEmail: null,
-			notes: ''
+			notes: '',
+			customMessage: ''
 		});
 	});
 
@@ -267,6 +269,48 @@ describe('data/guests.example.csv', () => {
 
 		expect(guests.some((guest) => !guest.active)).toBe(true);
 	});
+
+	// Otherwise the example teaches nothing about the column that is hardest to
+	// guess at: whether it takes the whole message or only the greeting.
+	it('demonstrates a household with its own invitation', () => {
+		const { guests } = validateGuests(parseCsv(example));
+		const custom = guests.find((guest) => guest.customMessage);
+
+		expect(custom).toBeTruthy();
+		expect(custom?.customMessage).toContain('{household}');
+	});
+
+	it('leaves the rest of the example on the shared template', () => {
+		const { guests } = validateGuests(parseCsv(example));
+
+		expect(guests.filter((guest) => guest.customMessage)).toHaveLength(1);
+	});
+});
+
+describe('the invitation column', () => {
+	function guest(row: string) {
+		const { guests, problems } = validateGuests(parseCsv(`household,seats,invitation\n${row}`));
+
+		return { customMessage: guests[0]?.customMessage ?? '', problems };
+	}
+
+	it('is blank unless the couple writes one', () => {
+		expect(guest('Santos,2,').customMessage).toBe('');
+	});
+
+	it('carries the wording through, commas and newlines included', () => {
+		expect(guest('Santos,2,"Hi there,\nwe would love you."').customMessage).toBe(
+			'Hi there,\nwe would love you.'
+		);
+	});
+
+	// The same limit the dashboard form enforces, so a spreadsheet cannot seed a
+	// document the dashboard would then refuse to edit back.
+	it('refuses one longer than the dashboard accepts', () => {
+		const { problems } = guest(`Santos,2,"${'x'.repeat(MAX_CUSTOM_MESSAGE + 1)}"`);
+
+		expect(problems.some((problem) => problem.includes('`invitation`'))).toBe(true);
+	});
 });
 
 const HOUSEHOLD = {
@@ -275,7 +319,8 @@ const HOUSEHOLD = {
 	seatsAllocated: 4,
 	active: true,
 	contactEmail: 'jc@example.com',
-	notes: ''
+	notes: '',
+	customMessage: ''
 };
 
 describe('newHousehold', () => {

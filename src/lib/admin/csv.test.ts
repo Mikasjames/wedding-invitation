@@ -149,3 +149,19 @@ describe('activeRows', () => {
 		expect(activeRows(rows)[0].active).toBe(true);
 	});
 });
+describe('the invitation column', () => {
+	it('carries the couple\'s wording, not the guest\'s note back', () => {
+		const cells = fromCsv(toCsv([row({ customMessage: 'Hi there.', message: 'Congratulations!' })]))[0];
+
+		expect(cells.invitation).toBe('Hi there.');
+		expect(cells.message).toBe('Congratulations!');
+	});
+
+	// The export is shaped so `pnpm seed` could read it back. This is the column
+	// that makes the round trip lossy otherwise.
+	it('survives the round trip a re-seed would do', () => {
+		const cells = fromCsv(toCsv([row({ customMessage: 'Do come, {household}.' })]))[0];
+
+		expect(cells.invitation).toBe('Do come, {household}.');
+	});
+});
