@@ -81,7 +81,14 @@ export async function getGuestListBackend(): Promise<GuestListBackend | null> {
 					});
 				});
 
-				return { code, householdName: household.householdName, seatsAllocated: household.seatsAllocated };
+				// `customMessage` echoed back so the receipt can render the wording that
+				// was actually written. See `CreatedHousehold`.
+				return {
+					code,
+					householdName: household.householdName,
+					seatsAllocated: household.seatsAllocated,
+					customMessage: household.customMessage ?? ''
+				};
 			} catch (error) {
 				// Raised by the transaction itself, so it must not be reclassified into
 				// a generic permission failure.

@@ -33,6 +33,21 @@ export interface CreatedHousehold {
 	code: string;
 	householdName: string;
 	seatsAllocated: number;
+
+	/**
+	 * This household's own wording, so the receipt shows and copies what was
+	 * actually stored rather than the shared template.
+	 *
+	 * Carried back from `create` rather than read out of the list afterwards: the
+	 * receipt is rendered from `lastCreated` alone, and without this it built the
+	 * standard message for a household the couple had just written bespoke wording
+	 * for — the one message on the page with no other way to recover it.
+	 *
+	 * Optional because `NewHousehold.customMessage` is, and because a household
+	 * added without one is the ordinary case. Empty means the shared template,
+	 * which is what `invitationMessage` renders for an empty `custom` anyway.
+	 */
+	customMessage?: string;
 }
 
 /**

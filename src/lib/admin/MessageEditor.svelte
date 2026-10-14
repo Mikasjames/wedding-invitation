@@ -44,6 +44,15 @@
 	 * rather than on text we would then have to compare it away from.
 	 */
 	let draft = $state(untrack(() => household.customMessage || template));
+	/**
+	 * A save announcement, withdrawn by anything that makes it untrue.
+	 *
+	 * On `input` as well as in `use()`: the token buttons were clearing it, and
+	 * typing did not, so "Saved." sat on screen next to a half-rewritten message
+	 * that had never been saved. The indicator is only ever true for the instant
+	 * between a completed write and the next keystroke, which is what it is
+	 * for.
+	 */
 	let saved = $state(false);
 
 	/** The textarea itself, so a token can be inserted where the caret is. */
@@ -162,6 +171,7 @@
 				rows="7"
 				bind:this={textarea}
 				bind:value={draft}
+				oninput={() => (saved = false)}
 				placeholder={'Hi {household}!\n\nWe would love you there.'}
 				class="{FIELD} leading-relaxed"
 				aria-invalid={tooLong ? 'true' : undefined}

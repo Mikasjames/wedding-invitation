@@ -185,6 +185,35 @@ export class GuestList {
 	}
 
 	/**
+	 * The actual re-read, and the only place the rows are replaced outside a
+	 * `load()`.
+	 *
+	 * Split out of `refresh()` so the `refreshing` guard cannot swallow the
+	 * re-read a create or a save depends on. The guard exists to stop the refresh
+	 * button double-firing, and while it also covered the write path it did exactly
+	 * that: clicking "Refresh" while a household was being added set `refreshing`,
+	 * so `create`'s own re-read returned immediately — and the refresh already
+	 * running had been issued *before* the write, so the household the couple had
+	 * just added stayed off screen with nothing to say so.
+	 *
+	 * Swallows its own failures, exactly as `refresh` did. That is what keeps a
+	 * failed re-read out of `create`'s and `setMessage`'s `catch`, where it would
+	 * be reported as a failed write on a write that succeeded.
+	 */
+	async #reRead(): Promise<void> {
+		try {
+			const backend = await this.#getBackend();
+
+			if (!backend) return;
+
+			this.rows = await backend.loadAll();
+			this.refreshError = null;
+		} catch (error) {
+			this.refreshError = describeGuestError(error);
+		}
+	}
+
+	/**
 	 * Re-reads the rows without touching `phase`.
 	 *
 	 * Public because the refresh button needs it, and for the same reason it is
@@ -216,6 +245,9 @@ export class GuestList {
 	 * `load()` keeps the demoting behaviour for the paths that *are* whole-list
 	 * failures — `sync`, "Try again", "Check again" — where clearing the rows is
 	 * also the right security call.
+	 *
+	 * The `refreshing` guard is here and not in `#reRead` for that reason: it is a
+	 * guard on the *button*, and the button is the only caller that needs one.
 	 */
 	async refresh(): Promise<void> {
 		// Set before the first await, for the same reason `create` does it on this
@@ -226,14 +258,7 @@ export class GuestList {
 		this.refreshing = true;
 
 		try {
-			const backend = await this.#getBackend();
-
-			if (!backend) return;
-
-			this.rows = await backend.loadAll();
-			this.refreshError = null;
-		} catch (error) {
-			this.refreshError = describeGuestError(error);
+			await this.#reRead();
 		} finally {
 			this.refreshing = false;
 		}
@@ -281,12 +306,15 @@ export class GuestList {
 
 			const created = await backend.create(household);
 
-			// Before the refresh, not after. `#refresh` swallows its own failures, but
+			// Before the refresh, not after. `#reRead` swallows its own failures, but
 			// the receipt is the one thing a create must never lose, and the order
 			// costs nothing.
 			this.lastCreated = created;
 
-			await this.refresh();
+			// `#reRead`, not `refresh()`. The button's `refreshing` guard belongs to
+			// the button; routing the write through it meant a click on "Refresh"
+			// mid-create silently cancelled the one re-read this depends on.
+			await this.#reRead();
 
 			return created;
 		} catch (error) {
@@ -329,7 +357,9 @@ export class GuestList {
 
 			await backend.setMessage(code, customMessage);
 
-			await this.refresh();
+			// See `create`: `#reRead`, so an in-flight refresh from the button cannot
+			// stand in for this one.
+			await this.#reRead();
 
 			return true;
 		} catch (error) {

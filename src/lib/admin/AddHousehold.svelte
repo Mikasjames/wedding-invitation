@@ -100,7 +100,11 @@
 				household: created.householdName,
 				seats: created.seatsAllocated,
 				code: created.code,
-				site: SITE
+				site: SITE,
+				// What they were given, not the shared template. The receipt is the
+				// only place this wording appears outside the detail panel, and the
+				// sheet it says to paste into Messenger has to be the one they wrote.
+				custom: created.customMessage
 			})
 		);
 
@@ -114,7 +118,10 @@
 					household: list.lastCreated.householdName,
 					seats: list.lastCreated.seatsAllocated,
 					code: list.lastCreated.code,
-					site: SITE
+					site: SITE,
+					// The same value the copy button uses, so what is read on screen
+					// and what lands on the clipboard cannot be two different messages.
+					custom: list.lastCreated.customMessage
 				})
 			: ''
 	);

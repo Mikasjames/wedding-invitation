@@ -350,6 +350,24 @@ describe('RsvpFlow.submit', () => {
 		});
 	});
 
+	// A declining household is nobody. Names typed before switching to "can't make
+	// it" used to be submitted alongside `partySize: 0`, which the dashboard renders
+	// under "Attending" and the CSV export carries — so a household that had said it
+	// cannot come listed who was coming. `setIntent` resizes the list towards the
+	// party, but only the write settles it: the rules never check the name count.
+	it('sends no names when declining, whatever was typed first', async () => {
+		h.flow.setPartySize(3);
+		h.flow.attendeeNames = ['Juan', 'Maria', 'Ana'];
+
+		h.flow.setIntent('declined');
+		await h.flow.submit();
+
+		const [, response] = h.save.mock.calls[0];
+		expect(response.status).toBe('declined');
+		expect(response.partySize).toBe(0);
+		expect(response.attendeeNames).toEqual([]);
+	});
+
 	// Blank name lines are not an answer. Storing them would hand the couple a
 	// list of empty rows to clean up before seating anyone.
 	it('drops blank attendee names and surrounding whitespace', async () => {

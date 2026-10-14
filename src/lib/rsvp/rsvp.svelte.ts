@@ -288,9 +288,26 @@ export class RsvpFlow {
 		const response: ResponseFields = {
 			status: this.intent,
 			partySize: this.intent === 'declined' ? 0 : this.partySize,
-			// Blank name lines are not an answer, so they are dropped rather than
-			// stored as empty strings the couple would have to clean up.
-			attendeeNames: this.attendeeNames.map((name) => name.trim()).filter(Boolean),
+			// A declining household is nobody, so it has no names — the same claim
+			// `partySize: 0` makes two lines above. Names typed before switching to
+			// "can't make it" would otherwise be stored and rendered by the dashboard
+			// under "Attending", and carried into the export.
+			//
+			// Blank name lines are not an answer either, so on the attending path
+			// they are dropped rather than stored as empty strings the couple would
+			// have to clean up.
+			// A declining household is nobody, so it has no names — the same claim
+			// `partySize: 0` makes two lines above. Names typed before switching to
+			// "can't make it" would otherwise be stored and rendered by the dashboard
+			// under "Attending", and carried into the export.
+			//
+			// Blank name lines are not an answer either, so on the attending path
+			// they are dropped rather than stored as empty strings the couple would
+			// have to clean up.
+			attendeeNames:
+				this.intent === 'declined'
+					? []
+					: this.attendeeNames.map((name) => name.trim()).filter(Boolean),
 			message: this.message.trim(),
 			respondedAt: null
 		};

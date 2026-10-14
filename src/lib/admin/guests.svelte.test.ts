@@ -37,10 +37,13 @@ function backend(options: { rows?: AdminRow[]; throws?: Error } = {}): GuestList
 			if (options.throws) throw options.throws;
 			return options.rows ?? ROWS;
 		},
+		// Echoes `customMessage` as `admin-guests.client.ts` does. Without it here
+		// the fake answers a question the tests below are not actually asking.
 		create: async (household) => ({
 			code: household.code ?? 'NEW0000001',
 			householdName: household.householdName,
-			seatsAllocated: household.seatsAllocated
+			seatsAllocated: household.seatsAllocated,
+			customMessage: household.customMessage ?? ''
 		}),
 		setMessage: async () => {}
 	};
@@ -448,9 +451,28 @@ describe('GuestList.create', () => {
 		expect(created).toEqual({
 			code: 'NEW0000001',
 			householdName: 'Reyes - Tiong & Chika',
-			seatsAllocated: 6
+			seatsAllocated: 6,
+			customMessage: ''
 		});
 		expect(list.lastCreated).toEqual(created);
+	});
+
+	// The receipt is the only place a household added from the dashboard ever has
+	// its wording shown — the seed's `out/links.csv` does not cover one. It used to
+	// be built from `{code, householdName, seatsAllocated}` alone, so a household the
+	// couple had just written bespoke wording for was sent the shared template from
+	// the one screen that says "send them this".
+	it('hands back the wording it was given, so the receipt is not the template', async () => {
+		const { list } = setup();
+		await list.sync('user-1');
+
+		const created = await list.create({
+			...NEW_HOUSEHOLD,
+			customMessage: 'Hi {household}! It has been years.'
+		});
+
+		expect(created?.customMessage).toBe('Hi {household}! It has been years.');
+		expect(list.lastCreated?.customMessage).toBe('Hi {household}! It has been years.');
 	});
 
 	// A refused create says nothing about whether the list still loads. Flipping
@@ -745,6 +767,44 @@ describe('GuestList.refresh', () => {
 		expect(loadAll).toHaveBeenCalledTimes(2);
 
 		await first;
+	});
+
+	// The guard belongs to the button. While it also covered the write path, a
+	// click on "Refresh" mid-create set `refreshing`, so the create's own re-read
+	// returned immediately — and the refresh already running had been issued
+	// *before* the write, so the household the couple had just added stayed off
+	// screen with nothing to say so.
+	it('does not let an in-flight refresh stand in for a write', async () => {
+		let seen = 0;
+
+		const counting = new GuestList(async () => ({
+			loadAll: async () => (seen++ === 0 ? ROWS : [...ROWS, ROWS[0]]),
+			create: async () => ({
+				code: 'NEW0000001',
+				householdName: 'Reyes',
+				seatsAllocated: 6
+			}),
+			setMessage: async () => {}
+		}));
+
+		await counting.sync('user-1');
+
+		// Both in flight at once: the button's refresh, and a create underneath it.
+		const refreshing = counting.refresh();
+		const creating = await counting.create({
+			householdName: 'Reyes',
+			side: 'both',
+			seatsAllocated: 6,
+			contactEmail: null,
+			notes: ''
+		});
+
+		expect(creating).not.toBeNull();
+		await refreshing;
+
+		// Three reads: the initial load, and one after each. Two would mean the
+		// create's re-read was dropped.
+		expect(seen).toBe(3);
 	});
 
 	// Nothing on screen changes during a refresh, so this flag exists only to
