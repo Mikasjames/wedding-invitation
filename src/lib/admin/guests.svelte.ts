@@ -6,7 +6,11 @@ import {
 	type GuestListBackend,
 	type NewHousehold
 } from './guests.driver';
-import { totals as totalRows } from './totals';
+import {
+	booksBalance as booksAddUp,
+	outstanding as countOutstanding,
+	totals as totalRows
+} from './totals';
 import type { AdminRow } from './row';
 
 export type GuestListPhase =
@@ -63,6 +67,25 @@ export class GuestList {
 
 	/** Derived rather than recomputed on read; `totals` walks every row. */
 	readonly totals = $derived(totalRows(this.rows));
+
+	/**
+	 * Heads still owed an answer, and the seats riding on them.
+	 *
+	 * Excludes archived and declined rows inside `outstanding` itself — a household
+	 * that said no has given its answer, and counting it again would suggest there
+	 * is still something to be done about it.
+	 */
+	readonly outstanding = $derived(countOutstanding(this.rows));
+
+	/**
+	 * Whether the figures in the totals strip add up.
+	 *
+	 * Always true for any input, so a `false` here means the arithmetic in
+	 * `totals.ts` was edited wrongly rather than that the data is bad. The page
+	 * says so rather than hiding it, because the strip is the thing the couple
+	 * plans the catering around.
+	 */
+	readonly balanced = $derived(booksAddUp(this.totals));
 
 	readonly #getBackend: () => Promise<GuestListBackend | null>;
 	#uid: string | null = null;

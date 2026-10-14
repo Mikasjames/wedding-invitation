@@ -7,8 +7,10 @@
 	import HouseholdCard from '$lib/admin/HouseholdCard.svelte';
 	import HouseholdDetail from '$lib/admin/HouseholdDetail.svelte';
 	import { AdminSession } from '$lib/admin/auth.svelte';
+	import { downloadCsv } from '$lib/admin/download';
 	import { GuestList } from '$lib/admin/guests.svelte';
 	import { ACCESS_DENIED } from '$lib/admin/guests.driver';
+	import type { Side } from '$lib/rsvp/types';
 	import { isAuthConfigured } from '$lib/firebase/app';
 	import { createAuthDriver } from '$lib/firebase/admin-auth.client';
 	import { getGuestListBackend } from '$lib/firebase/admin-guests.client';
@@ -18,6 +20,11 @@
 
 	const BUTTON_CLASS =
 		'rounded-full border border-gold/30 bg-plum px-6 py-3 font-body text-[11px] font-medium tracking-[0.28em] text-champagne uppercase transition hover:opacity-90';
+
+	const LABEL_CLASS =
+		'font-body text-[9px] font-medium tracking-[0.28em] text-gold-deep uppercase';
+
+	const SIDE_LABEL: Record<Side, string> = { bride: 'Bride', groom: 'Groom', both: 'Both' };
 
 	/**
 	 * Alignment declared per column, rather than derived from the index.
@@ -93,6 +100,18 @@
 	}
 
 	const t = $derived(guests.totals);
+
+	/**
+	 * The sides with households in them.
+	 *
+	 * `both` is the default on the add form, so a couple who never picked a side
+	 * has every household in `both` — and two empty tiles for bride and groom
+	 * beside them is noise rather than information. The strip is also skipped
+	 * entirely for a single side, which the overall figures above already say.
+	 */
+	const sidesInUse = $derived(
+		(['bride', 'groom', 'both'] as const).filter((side) => t.bySide[side].households > 0)
+	);
 
 	let adding = $state(false);
 
@@ -221,6 +240,24 @@
 				sound.
 			-->
 			<section class="rounded-2xl border border-gold/20 bg-champagne/20 px-5 py-6">
+				<!--
+					Above the figures rather than below them, because it is the only
+					wrong thing on this page that is wrong because of this repo rather
+					than because of Firestore. `booksBalance` holds for any input, so a
+					false result means the arithmetic in `totals.ts` was edited badly —
+					and the six numbers underneath are what the couple orders catering
+					against.
+				-->
+				{#if !guests.balanced}
+					<p
+						role="alert"
+						class="mb-5 rounded-full border border-oxblood/30 bg-ivory px-5 py-3 font-body text-[11px] leading-relaxed text-ink/70"
+					>
+						These figures do not add up, which means the dashboard's own arithmetic is
+						wrong rather than the guest list. The numbers below should not be relied on.
+					</p>
+				{/if}
+
 				<dl class="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
 					<AdminStat label="Households" value={t.households} />
 					<AdminStat label="Seats invited" value={t.invited} />
@@ -230,22 +267,64 @@
 					<AdminStat label="Seats unfilled" value={t.unfilledSeats} />
 				</dl>
 
-				{#if t.archived > 0 || t.overcommitted > 0}
-					<ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2 border-t border-gold/20 pt-4">
-						{#if t.archived > 0}
-							<li class="font-body text-[11px] text-ink/50">
-								{t.archived}
-								{t.archived === 1 ? 'household' : 'households'} archived
-							</li>
+				<!--
+					Only when a split actually exists. One side on its own is already
+					the figure above, restated.
+				-->
+				{#if sidesInUse.length > 1}
+					<dl class="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-gold/20 pt-5 sm:grid-cols-3">
+						{#each sidesInUse as side (side)}
+							<div>
+								<dt class={LABEL_CLASS}>{SIDE_LABEL[side]}</dt>
+								<dd class="font-body mt-1 text-sm text-ink">
+									{t.bySide[side].households}
+									{t.bySide[side].households === 1 ? 'household' : 'households'},
+									{t.bySide[side].confirmed} of {t.bySide[side].invited} seats
+								</dd>
+							</div>
+						{/each}
+					</dl>
+				{/if}
+
+				{#if guests.outstanding.households > 0 || t.archived > 0 || t.overcommitted > 0}
+					<div class="mt-6 border-t border-gold/20 pt-4">
+						<!--
+							First in the footer because it is the reason the dashboard gets
+							opened. `outstanding` already drops archived and declined rows,
+							so every household counted here is one somebody has to chase.
+						-->
+						{#if guests.outstanding.households > 0}
+							<p class="font-body text-[11px] text-ink/70">
+								<span class="text-ink">{guests.outstanding.households}</span>
+								{guests.outstanding.households === 1 ? 'household has' : 'households have'} not
+								answered yet, with
+								<span class="text-ink">{guests.outstanding.seats}</span>
+								{guests.outstanding.seats === 1 ? 'seat' : 'seats'} still unaccounted for.
+							</p>
 						{/if}
-						{#if t.overcommitted > 0}
-							<li class="font-body text-[11px] text-oxblood">
-								{t.overcommitted}
-								{t.overcommitted === 1 ? 'household has' : 'households have'} confirmed more
-								seats than they were given
-							</li>
+
+						{#if t.archived > 0 || t.overcommitted > 0}
+							<ul
+								class="flex flex-wrap gap-x-6 gap-y-2 {guests.outstanding.households > 0
+									? 'mt-3'
+									: ''}"
+							>
+								{#if t.archived > 0}
+									<li class="font-body text-[11px] text-ink/50">
+										{t.archived}
+										{t.archived === 1 ? 'household' : 'households'} archived
+									</li>
+								{/if}
+								{#if t.overcommitted > 0}
+									<li class="font-body text-[11px] text-oxblood">
+										{t.overcommitted}
+										{t.overcommitted === 1 ? 'household has' : 'households have'} confirmed more
+										seats than they were given
+									</li>
+								{/if}
+							</ul>
 						{/if}
-					</ul>
+					</div>
 				{/if}
 			</section>
 
@@ -265,7 +344,23 @@
 			{#if adding}
 				<AddHousehold list={guests} onclose={() => (adding = false)} />
 			{:else}
-				<div class="flex justify-end">
+				<div class="flex flex-wrap justify-end gap-3">
+					<!--
+						`toCsv` and its round-trip tests have existed since the dashboard
+						did, with no button anywhere. The export is the whole record —
+						names, messages, the couple's own notes — for the caterer and for a
+						backup, and on a phone it is the one thing here that can be handed
+						to somebody else.
+					-->
+					<button
+						type="button"
+						onclick={() => downloadCsv(guests.rows)}
+						disabled={guests.rows.length === 0}
+						class="{BUTTON_CLASS} w-full disabled:opacity-40 sm:w-auto"
+					>
+						Export CSV
+					</button>
+
 					<button
 						type="button"
 						onclick={() => (adding = true)}
