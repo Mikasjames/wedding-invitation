@@ -53,6 +53,14 @@ export class GuestList {
 	 */
 	lastCreated = $state<CreatedHousehold | null>(null);
 
+	/**
+	 * The rows on screen may be out of date, by one household.
+	 *
+	 * Set only by the background refresh that follows a create. It exists because
+	 * that refresh must not demote the page — see `#refresh`.
+	 */
+	refreshError = $state<string | null>(null);
+
 	/** Derived rather than recomputed on read; `totals` walks every row. */
 	readonly totals = $derived(totalRows(this.rows));
 
@@ -133,12 +141,45 @@ export class GuestList {
 		}
 	}
 
+	/**
+	 * Re-reads the rows after a write, without touching `phase`.
+	 *
+	 * `load()` is the wrong tool here. It opens by setting `phase = 'loading'`,
+	 * which unmounts the form mid-create, and on failure it sets `'failed'` and
+	 * clears the rows — and the page branches on `phase`, so a failed refresh
+	 * replaces a working dashboard with "Could not load" and takes the receipt with
+	 * it. The household would exist in Firestore while the couple is told the list
+	 * could not be loaded, with no code on screen and no way to retrieve one.
+	 *
+	 * A refresh that fails one second after a successful *write* is a network blip,
+	 * not an authorisation failure. So it leaves `rows` and `phase` alone and
+	 * records `refreshError` instead: the list is then short by one household,
+	 * which is visibly wrong and recoverable, rather than demoted and alarming.
+	 *
+	 * `load()` keeps the demoting behaviour for the paths that *are* whole-list
+	 * failures — `sync`, "Try again", "Check again" — where clearing the rows is
+	 * also the right security call.
+	 */
+	async #refresh(): Promise<void> {
+		try {
+			const backend = await this.#getBackend();
+
+			if (!backend) return;
+
+			this.rows = await backend.loadAll();
+			this.refreshError = null;
+		} catch (error) {
+			this.refreshError = describeGuestError(error);
+		}
+	}
+
 	/** Called when the account signs out. Drops every row on screen. */
 	clear(): void {
 		this.rows = [];
 		this.phase = 'idle';
 		this.error = null;
 		this.lastCreated = null;
+		this.refreshError = null;
 	}
 
 	/**
@@ -160,6 +201,7 @@ export class GuestList {
 
 		this.creating = true;
 		this.createError = null;
+		this.refreshError = null;
 
 		try {
 			const backend = await this.#getBackend();
@@ -171,9 +213,12 @@ export class GuestList {
 
 			const created = await backend.create(household);
 
-			await this.load();
-
+			// Before the refresh, not after. `#refresh` swallows its own failures, but
+			// the receipt is the one thing a create must never lose, and the order
+			// costs nothing.
 			this.lastCreated = created;
+
+			await this.#refresh();
 
 			return created;
 		} catch (error) {

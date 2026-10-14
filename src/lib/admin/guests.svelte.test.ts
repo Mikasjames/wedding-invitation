@@ -345,6 +345,88 @@ describe('GuestList.create', () => {
 		expect(loadAll).toHaveBeenCalled();
 	});
 
+	/**
+	 * The reason `#refresh` exists. A failed refresh used to go through `load()`,
+	 * which sets `phase = 'failed'` — and the page branches on `phase`, so the whole
+	 * branch holding the receipt was replaced by "Could not load". The household
+	 * existed in Firestore with its code nowhere on screen and no way to get it
+	 * back.
+	 */
+	it('keeps the receipt when the refresh after a create fails', async () => {
+		// The first load has to succeed, or `phase` is already `failed` before the
+		// create and the test would pass for the wrong reason.
+		let fail = false;
+
+		const flaky = new GuestList(async () => ({
+			loadAll: async () => {
+				if (fail) throw new AdminOfflineError();
+				return ROWS;
+			},
+			create: async () => ({
+				code: 'NEW0000001',
+				householdName: 'Reyes',
+				seatsAllocated: 6
+			})
+		}));
+		await flaky.sync('user-1');
+		expect(flaky.phase).toBe('ready');
+
+		fail = true;
+		const created = await flaky.create(NEW_HOUSEHOLD);
+
+		expect(created).not.toBeNull();
+		expect(flaky.lastCreated).toEqual(created);
+		// The page must keep rendering the ready branch, or the receipt is unreachable.
+		expect(flaky.phase).toBe('ready');
+		// Short by one household, which is visible and recoverable — not cleared.
+		expect(flaky.rows).toEqual(ROWS);
+		expect(flaky.refreshError).not.toBeNull();
+		expect(flaky.createError).toBeNull();
+	});
+
+	it('clears the refresh warning once a later refresh succeeds', async () => {
+		let fail = true;
+		const flaky = new GuestList(async () => ({
+			loadAll: async () => {
+				if (fail) throw new AdminOfflineError();
+				return ROWS;
+			},
+			create: async () => ({
+				code: 'NEW0000001',
+				householdName: 'Reyes',
+				seatsAllocated: 6
+			})
+		}));
+		await flaky.sync('user-1');
+
+		await flaky.create(NEW_HOUSEHOLD);
+		expect(flaky.refreshError).not.toBeNull();
+
+		fail = false;
+		await flaky.create(NEW_HOUSEHOLD);
+
+		expect(flaky.refreshError).toBeNull();
+		expect(flaky.rows).toEqual(ROWS);
+	});
+
+	// The other half of the split: `#refresh` exists because `load()` demotes, and
+	// it must keep doing so on the paths where a whole-list failure is the truth.
+	it('still demotes when a full load fails', async () => {
+		const failing = new GuestList(async () => ({
+			loadAll: async () => {
+				throw new AdminOfflineError();
+			},
+			create: async () => {
+				throw new AdminOfflineError();
+			}
+		}));
+		await failing.sync('user-1');
+
+		expect(failing.phase).toBe('failed');
+		expect(failing.rows).toEqual([]);
+		expect(failing.refreshError).toBeNull();
+	});
+
 	it('keeps what was created so it can be sent', async () => {
 		const { list } = setup();
 		await list.sync('user-1');

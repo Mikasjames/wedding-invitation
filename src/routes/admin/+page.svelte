@@ -208,6 +208,19 @@
 				{/if}
 			</section>
 
+			<!--
+				Shown instead of demoting the page when the refresh that follows a create
+				fails. The household exists and its code is on the receipt above; only the
+				list is behind, and saying so beats replacing a working dashboard with
+				"Could not load".
+			-->
+			{#if guests.refreshError}
+				<p role="status" class={ERROR_CLASS}>
+					That household was added, but the list could not be refreshed, so it may be
+					missing below. {guests.refreshError}
+				</p>
+			{/if}
+
 			{#if adding}
 				<AddHousehold list={guests} onclose={() => (adding = false)} />
 			{:else}

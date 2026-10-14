@@ -22,8 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { applicationDefault, cert, initializeApp } from 'firebase-admin/app';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { parseCsv, summarise, validateGuests, newHousehold, ownerFields } from '../src/lib/rsvp/guests.ts';
-import { invitationMessage } from '../src/lib/rsvp/message.ts';
-import { wedding } from '../src/lib/lib/wedding.ts';
+import { invitationLink, invitationMessage } from '../src/lib/rsvp/message.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const INPUT = resolve(ROOT, 'data/guests.csv');
@@ -58,16 +57,20 @@ async function siteUrl() {
 }
 
 /**
- * Deadline shown in the message, and the couple's names.
+ * Where the couple sends links.
  *
- * Both taken from `src/lib/lib/wedding.ts` rather than repeated. The rules file
- * already taught this lesson once — the cutoff exists in two places and nothing
- * keeps them in step — and the message is what actually reaches a guest, so a
- * second copy of the deadline here would be the same bug with a worse blast
- * radius.
+ * Read from `static/CNAME` rather than written out here. A hardcoded copy is the
+ * same drift that made the deadline a second source of truth: change the domain in
+ * one place and the messages go out pointing at the old one, to real people,
+ * after the fact. There is one domain file and this reads it.
+ *
+ * The names and the deadline are not read here at all — `invitationMessage`
+ * takes them from `src/lib/lib/wedding.ts`, which is the lesson the rules file
+ * already taught once. The cutoff exists in two places and nothing keeps them in
+ * step; a third copy of the deadline in this script would be the same bug with a
+ * worse blast radius, because this is the text a guest actually reads.
  */
 const SITE = await siteUrl();
-const DEADLINE = wedding.rsvp.deadline;
 
 /**
  * Which Firestore database to seed.
@@ -293,7 +296,7 @@ async function main() {
 			guest.code,
 			guest.householdName,
 			String(guest.seatsAllocated),
-			`${SITE}/?code=${guest.code}`,
+			invitationLink(SITE, guest.code),
 			message(guest.householdName, guest.seatsAllocated, guest.code)
 		])
 	];
