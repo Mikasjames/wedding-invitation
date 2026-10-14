@@ -3,6 +3,7 @@
 	import type { AdminRow } from './row';
 	import { copyText } from './clipboard';
 	import { formatTimestamp } from './format';
+	import LongText from './LongText.svelte';
 	import MessageEditor from './MessageEditor.svelte';
 	import type { GuestList } from './guests.svelte';
 	import { invitationLink, invitationMessage } from '$lib/rsvp/message';
@@ -105,12 +106,7 @@
 		<MessageEditor {household} {list} site={SITE} onclose={() => (editing = false)} />
 	{:else}
 		{#if household.customMessage}
-			<div>
-				<p class={LABEL}>Their invitation, in your own words</p>
-				<p class="mt-1 font-body text-sm leading-relaxed whitespace-pre-wrap text-ink">
-					{household.customMessage}
-				</p>
-			</div>
+			<LongText label="Their invitation, in your own words" text={household.customMessage} />
 		{/if}
 
 		{#if household.attendeeNames.length}
@@ -121,26 +117,11 @@
 		{/if}
 
 		{#if household.message}
-			<div>
-				<p class={LABEL}>Their message</p>
-				<!--
-					`pre-wrap`, not `pre`: a guest's message is theirs, so its line breaks
-					are theirs too. `pre` would also let one long unbroken string — a
-					pasted URL, say — run the cell far wider than the table.
-				-->
-				<p class="mt-1 font-body text-sm leading-relaxed whitespace-pre-wrap text-ink">
-					{household.message}
-				</p>
-			</div>
+			<LongText label="Their message" text={household.message} />
 		{/if}
 
 		{#if household.notes}
-			<div>
-				<p class={LABEL}>Your notes</p>
-				<p class="mt-1 font-body text-sm leading-relaxed whitespace-pre-wrap text-ink/80">
-					{household.notes}
-				</p>
-			</div>
+			<LongText label="Your notes" text={household.notes} />
 		{/if}
 
 		{#if household.contactEmail}
