@@ -141,8 +141,6 @@
 
 	const FIELD =
 		'w-full rounded-full border border-gold/30 bg-ivory px-5 py-3 font-body text-sm text-ink placeholder:text-ink/40';
-	const LABEL =
-		'font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase';
 </script>
 
 <!--
@@ -206,7 +204,7 @@
 
 		<form class="mt-5 flex flex-col gap-5" onsubmit={submit}>
 			<label class="flex flex-col gap-2">
-				<span class={LABEL}>Household</span>
+				<span class="form-label">Household</span>
 				<input
 					type="text"
 					bind:value={householdName}
@@ -220,7 +218,7 @@
 			</label>
 
 			<label class="flex flex-col gap-2">
-				<span class={LABEL}>Seats reserved</span>
+				<span class="form-label">Seats reserved</span>
 				<input
 					type="number"
 					inputmode="numeric"
@@ -237,7 +235,7 @@
 			</label>
 
 			<fieldset class="flex flex-col gap-2">
-				<legend class={LABEL}>Side</legend>
+				<legend class="form-label form-legend">Side</legend>
 				<div class="grid grid-cols-3 gap-2">
 					{#each SIDES as option (option.value)}
 						<button
@@ -256,7 +254,7 @@
 			</fieldset>
 
 			<label class="flex flex-col gap-2">
-				<span class={LABEL}>Email (optional)</span>
+				<span class="form-label">Email (optional)</span>
 				<input
 					type="email"
 					bind:value={email}
@@ -270,7 +268,7 @@
 			</label>
 
 			<label class="flex flex-col gap-2">
-				<span class={LABEL}>Notes (optional)</span>
+				<span class="form-label">Notes (optional)</span>
 				<textarea
 					rows="2"
 					bind:value={notes}
@@ -280,7 +278,7 @@
 			</label>
 
 			<label class="flex flex-col gap-2">
-				<span class={LABEL}>Their invitation, in your own words (optional)</span>
+				<span class="form-label">Their invitation, in your own words (optional)</span>
 				<textarea
 					rows="3"
 					bind:value={customMessage}
@@ -300,7 +298,7 @@
 			</label>
 
 			<label class="flex flex-col gap-2">
-				<span class={LABEL}>Code (optional)</span>
+				<span class="form-label">Code (optional)</span>
 				<input
 					type="text"
 					bind:value={code}

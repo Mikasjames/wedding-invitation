@@ -90,7 +90,6 @@
 
 	const FIELD =
 		'w-full rounded-2xl border border-gold/30 bg-ivory px-4 py-3 font-body text-sm text-ink placeholder:text-ink/40';
-	const LABEL = 'font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase';
 </script>
 
 <!--
@@ -124,7 +123,7 @@
 	</div>
 
 	<label class="flex flex-col gap-2">
-		<span class={LABEL}>Household</span>
+		<span class="form-label">Household</span>
 		<input
 			type="text"
 			bind:value={name}
@@ -138,7 +137,7 @@
 	</label>
 
 	<label class="flex flex-col gap-2">
-		<span class={LABEL}>Seats reserved</span>
+		<span class="form-label">Seats reserved</span>
 		<input
 			type="number"
 			inputmode="numeric"
@@ -166,7 +165,7 @@
 	</label>
 
 	<fieldset class="flex flex-col gap-2">
-		<legend class={LABEL}>Side</legend>
+		<legend class="form-label form-legend">Side</legend>
 		<div class="grid grid-cols-3 gap-2">
 			{#each SIDES as option (option.value)}
 				<button
@@ -185,7 +184,7 @@
 	</fieldset>
 
 	<label class="flex flex-col gap-2">
-		<span class={LABEL}>Email</span>
+		<span class="form-label">Email</span>
 		<input
 			type="email"
 			bind:value={email}
@@ -201,7 +200,7 @@
 	</label>
 
 	<label class="flex flex-col gap-2">
-		<span class={LABEL}>Your notes</span>
+		<span class="form-label">Your notes</span>
 		<textarea
 			rows="3"
 			bind:value={notes}

@@ -28,9 +28,6 @@
 	const BUTTON_CLASS =
 		'rounded-full border border-gold/30 bg-plum px-6 py-3 font-body text-[11px] font-medium tracking-[0.28em] text-champagne uppercase transition hover:opacity-90';
 
-	const LABEL_CLASS =
-		'font-body text-[9px] font-medium tracking-[0.28em] text-gold-deep uppercase';
-
 	const SIDE_LABEL: Record<Side, string> = { bride: 'Bride', groom: 'Groom', both: 'Both' };
 
 	/**
@@ -330,8 +327,8 @@
 					<dl class="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-gold/20 pt-5 sm:grid-cols-3">
 						{#each sidesInUse as side (side)}
 							<div>
-								<dt class={LABEL_CLASS}>{SIDE_LABEL[side]}</dt>
-								<dd class="font-body mt-1 text-sm text-ink">
+								<dt class="form-label">{SIDE_LABEL[side]}</dt>
+								<dd class="font-body text-sm text-ink">
 									{t.bySide[side].households}
 									{t.bySide[side].households === 1 ? 'household' : 'households'},
 									{t.bySide[side].confirmed} of {t.bySide[side].invited} seats

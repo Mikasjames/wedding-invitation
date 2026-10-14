@@ -76,7 +76,7 @@
 	read the whole message wants the whole message.
 -->
 <div>
-	<p class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
+	<p class="form-label">
 		{label}
 	</p>
 
@@ -89,7 +89,7 @@
 	-->
 	<p
 		bind:this={el}
-		class="mt-1 font-body text-sm leading-relaxed break-words whitespace-pre-wrap text-ink {expanded
+		class="font-body text-sm leading-relaxed break-words whitespace-pre-wrap text-ink {expanded
 			? ''
 			: 'line-clamp-3'}"
 	>

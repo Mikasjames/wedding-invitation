@@ -150,8 +150,6 @@
 		await copyText(preview);
 	}
 
-	const LABEL =
-		'font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase';
 	const FIELD =
 		'w-full rounded-2xl border border-gold/30 bg-ivory px-4 py-3 font-body text-sm text-ink placeholder:text-ink/40';
 </script>
@@ -166,7 +164,7 @@
 <div class="flex flex-col gap-5">
 	<div>
 		<label class="flex flex-col gap-2">
-			<span class={LABEL}>Their invitation, in your own words</span>
+			<span class="form-label">Their invitation, in your own words</span>
 			<textarea
 				rows="7"
 				bind:this={textarea}
@@ -179,7 +177,7 @@
 		</label>
 
 		<div class="mt-2 flex flex-wrap items-center gap-2">
-			<span class={LABEL}>Insert</span>
+			<span class="form-label">Insert</span>
 
 			{#each tokens as token (token)}
 				<button
@@ -215,10 +213,10 @@
 	</div>
 
 	<div>
-		<p class={LABEL}>What they will read</p>
+		<p class="form-label">What they will read</p>
 
 		<p
-			class="mt-1 rounded-2xl border border-gold/20 bg-ivory px-4 py-3 font-body text-[11px] leading-relaxed whitespace-pre-wrap text-ink/70"
+			class="rounded-2xl border border-gold/20 bg-ivory px-4 py-3 font-body text-[11px] leading-relaxed whitespace-pre-wrap text-ink/70"
 		>
 			{preview}
 		</p>

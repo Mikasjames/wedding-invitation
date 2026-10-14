@@ -41,7 +41,6 @@
 
 	let panel = $state<Panel>('none');
 
-	const LABEL = 'font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase';
 	const MUTED = 'font-body text-[11px] text-ink/50';
 
 	/**
@@ -132,8 +131,8 @@
 
 		{#if household.attendeeNames.length}
 			<div>
-				<p class={LABEL}>Attending</p>
-				<p class="mt-1 font-body text-sm text-ink">{household.attendeeNames.join(', ')}</p>
+				<p class="form-label">Attending</p>
+				<p class="font-body text-sm text-ink">{household.attendeeNames.join(', ')}</p>
 			</div>
 		{/if}
 
@@ -147,7 +146,7 @@
 
 		{#if household.contactEmail}
 			<div>
-				<p class={LABEL}>Email</p>
+				<p class="form-label">Email</p>
 				<!--
 					Never rendered to a guest — `SeededFields.contactEmail` is the couple's
 					own reminder list — so a `mailto:` here is safe and is the thing that
@@ -155,7 +154,7 @@
 				-->
 				<a
 					href="mailto:{household.contactEmail}"
-					class="mt-1 block break-all font-body text-sm text-ink underline underline-offset-4"
+					class="block break-all font-body text-sm text-ink underline underline-offset-4"
 				>
 					{household.contactEmail}
 				</a>

@@ -172,9 +172,7 @@
 		>
 			{#if rsvp.canAttend}
 				<fieldset class="flex w-full flex-col gap-3">
-					<legend class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
-						Our answer
-					</legend>
+					<legend class="form-label form-legend">Our answer</legend>
 					<div class="grid grid-cols-2 gap-3">
 						<button
 							type="button"
@@ -204,9 +202,7 @@
 
 			{#if rsvp.intent === 'attending' && rsvp.canAttend}
 				<fieldset class="flex w-full flex-col gap-3">
-					<legend class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
-						How many of you are coming?
-					</legend>
+					<legend class="form-label form-legend">How many of you are coming?</legend>
 					<div class="flex items-center justify-center gap-6">
 						<button
 							type="button"
@@ -245,9 +241,7 @@
 				</fieldset>
 
 				<details class="w-full">
-					<summary class="cursor-pointer font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
-						Names (optional)
-					</summary>
+					<summary class="form-label cursor-pointer">Names (optional)</summary>
 					<div class="mt-4 flex flex-col gap-2">
 						{#each rsvp.attendeeNames as _name, i (i)}
 							<label class="sr-only" for={`attendee-${i}`}>Guest {i + 1}</label>
@@ -266,9 +260,7 @@
 
 			{#if rsvp.canAttend}
 				<label class="flex w-full flex-col gap-2 text-left">
-					<span class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
-						A note for us (optional)
-					</span>
+					<span class="form-label">A note for us (optional)</span>
 					<textarea
 						rows="3"
 						bind:value={rsvp.message}

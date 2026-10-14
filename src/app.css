@@ -68,6 +68,57 @@
 	}
 }
 
+/*
+	The small uppercase label above a form control, and above a block of read-only
+	text in a detail panel.
+
+	Defined once because it was written out seven times across six components with
+	the spacing baked into the string — so adjusting it meant seven edits and no way
+	to tell which had been missed.
+
+	Plain declarations against the theme variables rather than `@apply`, on purpose:
+	`@apply` inside `@utility` is the part least safe to lean on across a Tailwind
+	major, and this has to keep working when `tailwindcss` is next upgraded.
+
+	`mb-1` is deliberate rather than incidental. The form stacks hold three
+	relationships at once — label to control, control to error, control to hint — and
+	they do not want the same space. Raising the stack's own `gap` would push the
+	error messages away from the field they are about. So the stack stays at `gap-2`
+	(8px, for the error and the hint) and the extra 4px lives here, giving 12 / 8 / 8
+	against section gaps of 20–24px.
+*/
+@utility form-label {
+	margin-bottom: 0.25rem;
+	font-family: var(--font-body);
+	font-size: 0.625rem;
+	font-weight: 500;
+	line-height: 1;
+	letter-spacing: 0.34em;
+	text-transform: uppercase;
+	color: var(--color-gold-deep);
+}
+
+/*
+	The same label, for a `<legend>`.
+
+	Separate from `form-label` because its spacing cannot come from `gap`. A
+	`<legend>` in a `<fieldset>` that is a flex container is the fieldset's *rendered
+	legend*: it is laid out against the fieldset box rather than as a flex item, so
+	the fieldset's `gap` never reaches it and the distance to the first control
+	collapses to zero. Measured in Chromium against this app's own markup:
+
+	    0px  fieldset flex-col gap-3, legend with no margin
+	   12px  the same, with mb-3
+
+	Nothing else about the two should differ, so this utility is only the margin and
+	composes with `form-label` alongside it. The alternative — dropping to a `<label>`
+	and a `<span>` — would fix the 12px at the cost of the fieldset grouping these
+	buttons rely on.
+*/
+@utility form-legend {
+	margin-bottom: 0.75rem;
+}
+
 @layer base {
 	html {
 		-webkit-text-size-adjust: 100%;
