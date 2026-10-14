@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { invitationLink, invitationMessage, renderTemplate } from './message';
+import {
+	customMessageFrom,
+	invitationLink,
+	invitationMessage,
+	renderTemplate
+} from './message';
 import { wedding } from '../lib/wedding';
 
 const BASE = {
@@ -113,5 +118,53 @@ describe('a household with its own message', () => {
 		expect(invitationMessage({ ...BASE, custom: 'Please reply by {deadline}.' })).toContain(
 			wedding.rsvp.deadline
 		);
+	});
+});
+describe('customMessageFrom', () => {
+	const STANDARD = invitationMessage(BASE);
+
+	// The reason this exists. The editor pre-fills the textarea with the standard
+	// message, so saving it untouched would otherwise write the template into
+	// `customMessage` — and from then on the household would ignore every later
+	// reword of `wedding.rsvp.invitation`, with nothing in the data recording that
+	// it was ever meant to track it.
+	it('stores nothing for the standard wording', () => {
+		expect(customMessageFrom(STANDARD, BASE)).toBe('');
+	});
+
+	it('stores nothing when the draft is only whitespace', () => {
+		expect(customMessageFrom('   \n  ', BASE)).toBe('');
+	});
+
+	// Compared trimmed, so a stray newline cannot make a household look customised.
+	it('is not fooled by whitespace around the standard wording', () => {
+		expect(customMessageFrom(`\n\n${STANDARD}\n\n`, BASE)).toBe('');
+	});
+
+	it('keeps anything they actually changed', () => {
+		expect(customMessageFrom(`${STANDARD}\n\nDo come if you can.`, BASE)).toBe(
+			`${STANDARD}\n\nDo come if you can.`
+		);
+	});
+
+	// Per-household, so comparing against a shared rendering would misjudge every
+	// household that is not the one the comparison was written for.
+	it('compares against this household\'s rendering of the template', () => {
+		const other = invitationMessage({ ...BASE, seats: 1 });
+
+		expect(customMessageFrom(other, BASE)).not.toBe('');
+	});
+
+	// Idempotent: opening a household that has its own wording and saving it
+	// untouched must not quietly drop them back onto the standard message.
+	it('keeps a household\'s existing wording untouched', () => {
+		const custom = 'It has been years. We would love you there.';
+
+		expect(customMessageFrom(custom, BASE)).toBe(custom);
+	});
+
+	// Reverting becomes a way to type rather than a manual clear-and-save.
+	it('treats typing the standard wording back as a revert', () => {
+		expect(customMessageFrom(STANDARD, BASE)).toBe('');
 	});
 });

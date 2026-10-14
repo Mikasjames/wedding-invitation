@@ -108,6 +108,38 @@ export function invitationMessage({ household, seats, code, site, custom }: Invi
 }
 
 /**
+ * What to store for a draft the couple has been editing.
+ *
+ * Blank when the draft is what the shared template already renders to for this
+ * household. That is the whole point of it: "unedited" has to stay the default
+ * state, or the wording a household was last shown gets frozen onto it.
+ *
+ * The failure this prevents is quiet. The editor pre-fills the textarea with the
+ * standard message so it can be edited rather than retyped; saving that unchanged
+ * would write the template into `customMessage`, and from then on the household
+ * would ignore every later reword of `wedding.rsvp.invitation`. Nothing in the
+ * data would record that its wording was ever meant to track the template, so the
+ * household would simply be one of the ones that quietly misses the change.
+ *
+ * Idempotent in both directions, which is why it compares against the *rendered*
+ * template rather than a raw template string: a household's existing custom text
+ * is never equal to the template, so opening the editor and saving it untouched
+ * keeps it exactly as it was. And typing the standard wording back becomes a way
+ * to revert, rather than a manual clear-the-box-and-hope-you-click-save.
+ *
+ * Compared trimmed, so a stray trailing newline cannot make a household look
+ * customised when it is not.
+ */
+export function customMessageFrom(
+	draft: string,
+	input: Omit<InvitationInput, 'custom'>
+): string {
+	const trimmed = draft.trim();
+
+	return trimmed === invitationMessage(input).trim() ? '' : trimmed;
+}
+
+/**
  * Guarantees the message contains a way to RSVP.
  *
  * A custom message is the couple's own words, and they can leave the link out —

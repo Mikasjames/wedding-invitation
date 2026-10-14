@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick, untrack } from 'svelte';
 	import { copyText } from './clipboard';
-	import { MAX_CUSTOM_MESSAGE, invitationLink, invitationMessage } from '$lib/rsvp/message';
+	import { MAX_CUSTOM_MESSAGE, customMessageFrom, invitationLink, invitationMessage } from '$lib/rsvp/message';
 	import type { GuestList } from './guests.svelte';
 	import type { AdminRow } from './row';
 
@@ -16,15 +16,34 @@
 	let { household, list, site, onclose }: Props = $props();
 
 	/**
-	 * A deliberate snapshot of what is stored, not a binding to it.
+	 * What this household receives when nobody has customised anything — the shared
+	 * template, rendered for them.
 	 *
-	 * `untrack` because the reactivity would be wrong in both directions. Opening
-	 * the editor mounts this component fresh, so the initial read is exactly the
-	 * stored value; and after a save the list is re-read, replacing `household`
-	 * with a new object — which, tracked, would overwrite the couple's draft from
-	 * under the cursor while they are still typing in it.
+	 * Compared against the draft below, not merely shown in the preview. That
+	 * comparison is what keeps "unedited" meaningful: see `customMessageFrom`.
 	 */
-	let draft = $state(untrack(() => household.customMessage));
+	const template = $derived(
+		invitationMessage({
+			household: household.householdName,
+			seats: household.seatsAllocated,
+			code: household.code,
+			site
+		})
+	);
+
+	/**
+	 * Starts from the stored wording, or from the standard message when there is
+	 * none — so the couple edits real words rather than retyping them out of a
+	 * preview beside them.
+	 *
+	 * `untrack` for the same reason the snapshot had, and it now has to cover both
+	 * reads: after a save the list is re-read, which replaces `household` with a
+	 * new object, and tracked that would overwrite the draft from under the cursor
+	 * while they are still typing in it. It reads `household.customMessage` first
+	 * on purpose, so a household that *does* have its own wording opens on that
+	 * rather than on text we would then have to compare it away from.
+	 */
+	let draft = $state(untrack(() => household.customMessage || template));
 	let saved = $state(false);
 
 	/** The textarea itself, so a token can be inserted where the caret is. */
@@ -66,7 +85,25 @@
 
 	const remaining = $derived(MAX_CUSTOM_MESSAGE - draft.length);
 	const tooLong = $derived(remaining < 0);
-	const changed = $derived(draft.trim() !== household.customMessage);
+
+	/** Whether the couple has moved anything off the standard wording. */
+	const differs = $derived(draft.trim() !== template.trim());
+
+	/**
+	 * What a save would actually write. Blank when the draft is still the standard
+	 * wording, which is the whole reason this is computed here rather than saved
+	 * from the textarea directly.
+	 */
+	const value = $derived(
+		customMessageFrom(draft, {
+			household: household.householdName,
+			seats: household.seatsAllocated,
+			code: household.code,
+			site
+		})
+	);
+
+	const changed = $derived(value !== household.customMessage);
 
 	/**
 	 * Whether the couple has written the link themselves.
@@ -97,7 +134,7 @@
 	async function save() {
 		if (tooLong) return;
 
-		if (await list.setMessage(household.code, draft.trim())) saved = true;
+		if (await list.setMessage(household.code, value)) saved = true;
 	}
 
 	async function copyPreview() {
@@ -147,23 +184,24 @@
 		</div>
 
 		<!--
-			Counted down rather than up, and in red once it is over. Firestore would
-			accept a megabyte here; this is about the couple's own screen, and about a
-			pasted essay being caught before it is stored rather than after.
+			Two states, not one. Over the limit always shows, because it blocks the
+			save and hiding a blocking message is how a 2,000-character limit gets
+			discovered at the Firestore instead.
+
+			The countdown only appears once the draft has moved off the standard
+			wording. Otherwise a pre-filled textarea opens reading "1,970 characters
+			left" for a message the couple has not written a word of, which looks like
+			they already have.
 		-->
-		<p
-			class="mt-2 font-body text-[11px] {tooLong
-				? 'text-oxblood'
-				: remaining < 200
-					? 'text-ink/50'
-					: 'text-ink/40'}"
-		>
-			{#if tooLong}
+		{#if tooLong}
+			<p class="mt-2 font-body text-[11px] text-oxblood">
 				{remaining * -1} characters over the {MAX_CUSTOM_MESSAGE} limit.
-			{:else}
+			</p>
+		{:else if differs}
+			<p class="mt-2 font-body text-[11px] {remaining < 200 ? 'text-ink/50' : 'text-ink/40'}">
 				{remaining} characters left.
-			{/if}
-		</p>
+			</p>
+		{/if}
 	</div>
 
 	<div>
@@ -177,19 +215,30 @@
 	</div>
 
 	<!--
-		Said once, here, rather than left to be discovered. The link is re-attached
-		automatically when the message omits it, so the couple cannot break the one
-		thing that makes the invitation work — but they should know it happens
-		rather than finding a line in their message they did not write.
-	-->
-	<p class="font-body text-[11px] leading-relaxed text-ink/50">
-		{#if hasOwnLink}
-			Your message includes the link, so nothing has been added to it.
-		{:else}
-			The link and code are added to the end for you, so nobody receives an invitation
-			they cannot open.
-		{/if}
-	</p>
+			Explains the state the textarea opens in. Without it, a pre-filled box
+			looks like the couple's own wording has already been written and saved,
+			when in fact it is the shared template shown for editing.
+
+			The link sentence is conditional on `differs` for the opposite reason: the
+			standard wording already contains the link, so telling them "the link is
+			added for you" about a message they did not write would be wrong.
+		-->
+	{#if !differs}
+		<p class="font-body text-[11px] leading-relaxed text-ink/50">
+			This is the standard message. Change anything above and it becomes this
+			household's own; leave it as it is and they keep receiving whatever you
+			write in <code class="text-ink/70">wedding.rsvp.invitation</code>.
+		</p>
+	{:else}
+		<p class="font-body text-[11px] leading-relaxed text-ink/50">
+			{#if hasOwnLink}
+				Your message includes the link, so nothing has been added to it.
+			{:else}
+				The link and code are added to the end for you, so nobody receives an
+				invitation they cannot open.
+			{/if}
+		</p>
+	{/if}
 
 	{#if list.messageError}
 		<p role="alert" class="rounded-full border border-oxblood/30 bg-ivory px-4 py-3 font-body text-[11px] text-ink/70">
