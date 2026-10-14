@@ -36,6 +36,30 @@
 		aria-hidden="true"
 	></div>
 
+	<!--
+		Full-bleed watermarks, deliberately. Both plants span the whole hero and sit
+		behind the type, which is the look: the botanical work reads as a wash under
+		the words rather than a decoration competing with them at the corners.
+
+		THE `w-*` CLASSES ARE NOT INERT, and the boundary between them and `w-full`
+		is the whole subtlety here. `w-[60%]` and `w-[46%]` are *base* utilities, in
+		the same Tailwind layer as the `w-full` inside Sprig, so `w-full` wins and the
+		plants are full-bleed below `sm:`. The `sm:` and `lg:` ones are variants,
+		which Tailwind emits in later media blocks, and they *do* apply. So the
+		realised width is: full-bleed under 640px, 52%/40% from `sm`, 46%/36% at `lg`.
+
+		That leaves a gap. Between roughly 520px and the `sm:` breakpoint the plants
+		are still full-bleed, so their heights scale with the viewport while the
+		hero's height does not — and they grow into each other. With these two ratios
+		they meet once the viewport is wider than about 0.555 of its height, which
+		is nothing at 375 × 812 and plenty at 600 × 900.
+
+		`min-[520px]:max-w-*` closes it. `max-w-*` is a different property, so it
+		always applies, and at the `sm:` and `lg:` values it changes nothing:
+		`max-w-[52%]` permits the 52% that `sm:` sets and the 46% that `lg:` sets.
+		So this caps exactly the band it names and leaves every other width pixel
+		for pixel as it was.
+	-->
 	<div
 		class="pointer-events-none absolute inset-0 z-0"
 		class:is-revealed={reveal.opened}
@@ -45,17 +69,17 @@
 			src="/plants/plant_2.svg"
 			ratio={659 / 641}
 			from="top-right"
-			class="absolute -top-[10%] -right-[11%] w-[60%] [--sprig-opacity:0.55] sm:-top-[9%] sm:-right-[10%] sm:w-[52%] sm:[--sprig-opacity:1] lg:-right-[8%] lg:w-[46%]"
+			class="absolute -top-[10%] -right-[11%] w-[60%] min-[520px]:max-w-[52%] [--sprig-opacity:0.55] sm:-top-[9%] sm:-right-[10%] sm:w-[52%] sm:[--sprig-opacity:1] lg:-right-[8%] lg:w-[46%]"
 		/>
 		<Sprig
 			src="/plants/plant_1.svg"
 			ratio={640 / 725}
 			from="bottom-left"
-			class="absolute -bottom-[7%] -left-[9%] w-[46%] [--sprig-opacity:0.55] sm:-bottom-[7%] sm:-left-[8%] sm:w-[40%] sm:[--sprig-opacity:1] lg:w-[36%]"
+			class="absolute -bottom-[7%] -left-[9%] w-[46%] min-[520px]:max-w-[40%] [--sprig-opacity:0.55] sm:-bottom-[7%] sm:-left-[8%] sm:w-[40%] sm:[--sprig-opacity:1] lg:w-[36%]"
 		/>
 	</div>
 
-	<div class="relative z-10 flex max-w-md flex-col items-center text-center">
+	<div class="relative z-10 flex max-w-md flex-col items-center text-center" data-hero-type>
 		<p class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
 			Save the date
 		</p>

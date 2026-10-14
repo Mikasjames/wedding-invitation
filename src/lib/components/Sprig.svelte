@@ -23,17 +23,30 @@
 />
 
 <!--
-	The image fills its container, so callers cap it with `max-w-*`, not `w-*`:
-	a `w-*` utility of their own cannot beat the `w-full` above, because both
-	live in the same Tailwind layer and the later rule in the stylesheet wins —
-	not the order the two classes appear in the attribute. `max-w-*` is a
-	different property, so a cap always applies no matter which order the two
-	rules are emitted in. A caller reaching for `w-*` here gets a plant that
-	silently spans the whole container and lays itself across the text.
+	The image fills its container. That is the intended default, not an oversight:
+	the hero uses these as full-bleed botanical watermarks behind the typography,
+	offset from a corner by the caller and allowed to bleed past the section's box,
+	which `overflow-hidden` clips.
 
-	Opacity is the other half of this. The revealed rule below is specific
-	enough to outrank a plain `opacity-*` utility, so callers pass
-	`--sprig-opacity` instead.
+	A caller wanting a smaller plant has to know which kind of `w-*` they are
+	writing, because the two behave differently and only one of them wins:
+
+	  - A *base* `w-*` — `w-[60%]` — is in the same Tailwind layer as the
+	    `w-full` above, so `w-full` wins regardless of the order the classes
+	    appear in the attribute. The plant stays full-bleed and nothing says so.
+
+	  - A *variant* `w-*` — `sm:w-[52%]`, `lg:w-[46%]` — lives in the media
+	    block Tailwind emits for that breakpoint, which comes after the base
+	    layer. It wins. So a caller who sets only variants gets a plant that is
+	    full-bleed below the first breakpoint and sized above it, with a visible
+	    step at the boundary.
+
+	`max-w-*` avoids both, being a different property rather than a competing
+	declaration, so a cap applies at every width it is set.
+
+	Opacity is the other half of this. The revealed rule below is specific enough
+	to outrank a plain `opacity-*` utility, so callers pass `--sprig-opacity`
+	instead.
 -->
 <style>
 	img[data-sprig] {

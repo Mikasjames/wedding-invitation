@@ -7,10 +7,6 @@ interface Box {
 	height: number;
 }
 
-function overlaps(a: Box, b: Box): boolean {
-	return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
-}
-
 async function revealHero(page: Page) {
 	await page.goto('/');
 	await page.getByRole('button', { name: 'Open the invitation' }).click();
@@ -145,23 +141,52 @@ test.describe('hero countdown', () => {
 });
 
 test.describe('hero plants', () => {
-	// The whole reason this suite exists: the plants were sized by a `w-*`
-	// utility that a hardcoded `w-full` in the component silently outranked, so
-	// each one rendered a full viewport wide and lay itself across the date and
-	// the countdown.
-	test('stay a corner decoration instead of growing to the viewport', async ({ page }) => {
+	/**
+	 * Mobile only, which is the only place full-bleed survives: above 640 the
+	 * `sm:` and `lg:` variants win against the `w-full` inside Sprig, and the
+	 * plants are meant to be sized there.
+	 *
+	 * It previously asserted this at every width, and failed continuously — it was
+	 * written when the belief was that a base `w-*` could override `w-full`. It
+	 * cannot; only a variant can.
+	 */
+	test('span the hero on a phone rather than sitting in a corner', async ({ page }) => {
 		await page.setViewportSize({ width: 375, height: 812 });
 		await revealHero(page);
 
-		const viewport = page.viewportSize();
+		const hero = await page.locator('section').first().boundingBox();
 		const boxes = await plantRects(page);
 
 		expect(boxes).toHaveLength(2);
 
-		// The widest the hero asks for is 56%. The bound is here to catch a
-		// plant falling back to the full viewport, not to police the design.
 		for (const box of boxes) {
-			expect(box.width, 'plant width').toBeLessThanOrEqual(viewport!.width * 0.6);
+			expect(box.width, 'plant width').toBeGreaterThanOrEqual(hero!.width * 0.95);
+		}
+	});
+
+	// The gap nothing covered. The plants are full-bleed below `sm:`, so their
+	// heights scale with the viewport width while the hero's height is
+	// viewport-bound — and between roughly 520px and the `sm:` breakpoint they
+	// grow tall enough to cross each other. On a 600 × 900 screen the top-right
+	// and bottom-left plants overlapped through most of the hero.
+	//
+	// This sweeps the range rather than pinning one width, because the crossing
+	// point is set by the viewport's aspect ratio and not by width alone: on a
+	// 1000px-tall screen they meet nearer 555px. 375 and 900 are in the sweep as
+	// regression guards for the bands that were already right.
+	test('never cross each other, at any width', async ({ page }) => {
+		for (const width of [375, 520, 560, 600, 639, 900]) {
+			await page.setViewportSize({ width, height: 900 });
+			await revealHero(page);
+
+			const [top, bottom] = await plantRects(page);
+
+			expect(top, `plants at ${width}px`).toBeDefined();
+			expect(bottom, `plants at ${width}px`).toBeDefined();
+
+			const crossing = top!.y + top!.height > bottom!.y;
+
+			expect(crossing, `plants overlap each other at ${width}px`).toBe(false);
 		}
 	});
 
@@ -178,20 +203,39 @@ test.describe('hero plants', () => {
 		await expect.poll(() => opacities(page), { timeout: 10_000 }).toEqual([1, 1]);
 	});
 
-	test('do not sit on top of the date, city or countdown', async ({ page }) => {
+	/**
+	 * Replaces a test that asserted the plants never geometrically intersect a run
+	 * of hero text. Under a full-bleed watermark that property is unsatisfiable —
+	 * spanning the type is the point — so it could not be repaired, only restated.
+	 *
+	 * What matters for a watermark behind typography is that it is *behind* it, so
+	 * this checks stacking order rather than geometry.
+	 *
+	 * Compared by computed `z-index`, not by `document.elementFromPoint()`. That
+	 * looks like the obvious way to ask what is on top and silently proves nothing
+	 * here: the plant container carries `pointer-events-none`, which removes it from
+	 * hit testing entirely, so it can never be the element returned no matter what
+	 * it is painted over. Both containers are positioned, so `z-index` is the
+	 * property that actually decides the order, and inverting the two — which is
+	 * what this would exist to catch — makes it fail.
+	 */
+	test('sit behind the type rather than over it', async ({ page }) => {
 		await page.setViewportSize({ width: 375, height: 812 });
 		await revealHero(page);
 
-		const plantBoxes = await plantRects(page);
-		const textRects = await heroGlyphRects(page);
+		const layers = await page.evaluate(() => {
+			const plants = document.querySelector('img[data-sprig]')?.parentElement;
+			const type = document.querySelector('[data-hero-type]');
 
-		expect(plantBoxes).toHaveLength(2);
-		expect(textRects.length).toBeGreaterThan(3);
+			return {
+				plants: plants ? getComputedStyle(plants).zIndex : null,
+				type: type ? getComputedStyle(type).zIndex : null
+			};
+		});
 
-		for (const plant of plantBoxes) {
-			for (const text of textRects) {
-				expect(overlaps(plant, text), `plant over glyph ${JSON.stringify(text)}`).toBe(false);
-			}
-		}
+		expect(layers.plants, 'no plant container found').not.toBeNull();
+		expect(layers.type, 'no hero type container found').not.toBeNull();
+
+		expect(Number(layers.plants)).toBeLessThan(Number(layers.type));
 	});
 });
