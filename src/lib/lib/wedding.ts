@@ -56,6 +56,20 @@ export const wedding = {
 
 	city: 'Tanza, Cavite',
 
+	/**
+	 * How many guests the couple is planning for.
+	 *
+	 * Planning only: no guest sees it, and nothing enforces it. The dashboard
+	 * compares the heads confirmed — and every seat still outstanding — against
+	 * this number, so the couple can tell whether the list fits the room before
+	 * invitations go out. That matters most when most households are families
+	 * holding four or five seats each.
+	 *
+	 * `null` hides the comparison. Tentative while the count is still being
+	 * settled, so change it here rather than in the dashboard.
+	 */
+	guestCapacity: 100 as number | null,
+
 	ceremony: {
 		name: 'The Ceremony',
 		venue: 'Kingdom Hall of Jehovah\'s Witnesses, Tanza, Cavite, Philippines',
