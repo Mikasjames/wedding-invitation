@@ -7,6 +7,7 @@
 	import HouseholdCard from '$lib/admin/HouseholdCard.svelte';
 	import HouseholdDetail from '$lib/admin/HouseholdDetail.svelte';
 	import { AdminSession } from '$lib/admin/auth.svelte';
+	import { capacityStanding } from '$lib/admin/capacity';
 	import { downloadCsv } from '$lib/admin/download';
 	import { GuestList } from '$lib/admin/guests.svelte';
 	import {
@@ -21,6 +22,7 @@
 	import { isAuthConfigured } from '$lib/firebase/app';
 	import { createAuthDriver } from '$lib/firebase/admin-auth.client';
 	import { getGuestListBackend } from '$lib/firebase/admin-guests.client';
+	import { wedding } from '$lib/lib/wedding';
 
 	const ERROR_CLASS =
 		'mt-6 w-full rounded-full border border-oxblood/30 bg-ivory px-5 py-3 font-body text-[11px] leading-relaxed text-ink/70';
@@ -104,6 +106,16 @@
 	}
 
 	const t = $derived(guests.totals);
+
+	/**
+	 * How the list stands against the number of guests the couple is planning
+	 * for, or `null` when `wedding.ts` sets no target.
+	 *
+	 * The six figures below say how many seats exist in each state. This says
+	 * whether the list fits the room, which is a different question and the one
+	 * that has to be answered before the invitations go out.
+	 */
+	const capacity = $derived(capacityStanding(t, wedding.guestCapacity));
 
 	/**
 	 * The sides with households in them.
@@ -318,6 +330,47 @@
 					<AdminStat label="Declined seats" value={t.declinedSeats} />
 					<AdminStat label="Seats unfilled" value={t.unfilledSeats} />
 				</dl>
+
+				<!--
+					Not a seventh stat. The six figures above are counts of seats in
+					each state; this is a comparison against a planning target, and a
+					number on the same line would invite being read as one more count.
+
+					The target is `wedding.guestCapacity`, so it is edited in the same
+					place as every other wedding fact rather than hidden in here.
+				-->
+				{#if capacity}
+					<div class="mt-5 border-t border-gold/20 pt-4">
+						<p class="font-body text-[11px] text-ink/60">
+							<span class="text-ink">{capacity.confirmed}</span>
+							of {capacity.target} confirmed
+							{#if capacity.remaining > 0}
+								· <span class="text-ink">{capacity.remaining}</span>
+								{capacity.remaining === 1 ? 'guest' : 'guests'} to go
+							{:else if capacity.confirmedOver > 0}
+								· <span class="text-oxblood">{capacity.confirmedOver} over target</span>
+							{/if}
+						</p>
+
+						<!--
+							Only while the target is still intact. Once confirmed heads
+							are already over it, the line above says so and this would
+							repeat it in longer words.
+
+							`fullHouse` rather than the seats invited: a decline releases
+							its seats, and a family that comes with two of its five
+							releases the other three. Warning about those would be an
+							alarm about people who are not coming.
+						-->
+						{#if capacity.fullHouseOver > 0 && capacity.confirmedOver === 0}
+							<p class="mt-2 font-body text-[11px] text-ink/60">
+								If every household still to answer fills its seats, that is
+								<span class="text-oxblood">{capacity.fullHouse}</span> —
+								{capacity.fullHouseOver} over the target.
+							</p>
+						{/if}
+					</div>
+				{/if}
 
 				<!--
 					Only when a split actually exists. One side on its own is already
