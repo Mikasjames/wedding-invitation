@@ -100,8 +100,16 @@ export const wedding = {
 	],
 dressCode: {
 		title: 'Barong Tagalog / Filipiniana',
-		description:
-			'Placeholder: formal barong or gown in earth tones. Filipiniana welcome. Replace with your actual dress code.'
+		description: 'Formal barong or Filipiniana in any of the shades below.',
+
+		/** The colours guests are invited to wear, in the order they are shown. */
+		palette: [
+			{ name: 'Dusty Blue', hex: '#8c9fb1' },
+			{ name: 'Ivory', hex: '#f2ebe1' },
+			{ name: 'Powder Blue', hex: '#c8d5e1' },
+			{ name: 'Champagne', hex: '#e3cfb1' },
+			{ name: 'Slate Blue', hex: '#5d7890' }
+		]
 	},
 
 	rsvp: {
