@@ -65,6 +65,18 @@ describe('wedding', () => {
 		expect(wedding.reception.address).toBeTruthy();
 	});
 
+	it('has a named, valid dress-code palette', () => {
+		const palette = wedding.dressCode.palette;
+
+		expect(palette.length).toBeGreaterThan(0);
+		expect(new Set(palette.map((colour) => colour.name)).size).toBe(palette.length);
+
+		for (const colour of palette) {
+			expect(colour.name).toBeTruthy();
+			expect(colour.hex).toMatch(/^#[0-9a-f]{6}$/i);
+		}
+	});
+
 	// The RSVP deadline was briefly set past the ceremony, which is invisible in
 	// every other assertion here — both strings are well-formed dates. Parse the
 	// label as written (it is a display string, not ISO) and require the cutoff to
