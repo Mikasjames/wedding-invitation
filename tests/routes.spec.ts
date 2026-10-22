@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { scriptFonts, systemFonts } from '../src/lib/lib/fonts';
+import { wedding } from '../src/lib/lib/wedding';
 
 test.describe('opening types', () => {
 	test('root shows the envelope reveal', async ({ page }) => {
@@ -39,6 +40,19 @@ test.describe('opening types', () => {
 			await page.goto(route);
 			await expect(page.getByText('Save the date')).toBeAttached();
 			await expect(page).toHaveTitle(/Michal & Lemuel/);
+		}
+	});
+
+	test('dress code shows every palette colour', async ({ page }) => {
+		await page.goto('/');
+		await page.getByRole('button', { name: 'Open the invitation' }).click();
+
+		await expect(page.locator('[data-palette-swatch]')).toHaveCount(
+			wedding.dressCode.palette.length
+		);
+
+		for (const colour of wedding.dressCode.palette) {
+			await expect(page.getByText(colour.name, { exact: true })).toBeVisible();
 		}
 	});
 
