@@ -32,6 +32,7 @@
 	let sealEl = $state<HTMLButtonElement | null>(null);
 	let guard = false;
 	let timers: ReturnType<typeof setTimeout>[] = [];
+	let confettiFrame = 0;
 
 	/** When the envelope finishes leaving. Lifted out of `handleOpen` so the
 	 *  scroll unlock can be derived against it. */
@@ -98,6 +99,7 @@
 
 		return () => {
 			for (const t of timers) clearTimeout(t);
+			cancelAnimationFrame(confettiFrame);
 		};
 	});
 
@@ -105,11 +107,20 @@
 		if (guard) return;
 		guard = true;
 
+		// Commit the reveal before the decorative work. The phase changes below
+		// are batched with this one, so the first frame is not waiting on the
+		// audio element or canvas-confetti's canvas setup.
+		openInvite();
+
 		if (withMusic) void ambience.play();
 
-		if (withConfetti) sealBurst(!reduced);
-
-		openInvite();
+		if (withConfetti) {
+			// Two frames: the first lets the reveal state paint, the second keeps
+			// the confetti's setup and first draw out of that same frame.
+			confettiFrame = requestAnimationFrame(() => {
+				confettiFrame = requestAnimationFrame(() => sealBurst(!reduced));
+			});
+		}
 
 		if (reduced) {
 			phase = 'leaving';
@@ -366,18 +377,34 @@
 	.pocket-left {
 		clip-path: polygon(0 0, 50% var(--apex), 0 100%);
 		background: linear-gradient(105deg, #e0e4e7, #d7dde1 70%);
-		filter: drop-shadow(3px 5px 5px rgb(62 72 84 / 0.2));
 	}
 
 	.pocket-right {
 		clip-path: polygon(100% 0, 50% var(--apex), 100% 100%);
 		background: linear-gradient(255deg, #dce1e4, #d3dade 70%);
-		filter: drop-shadow(3px 5px 5px rgb(62 72 84 / 0.2));
 	}
 
 	.pocket-bottom {
 		clip-path: polygon(0 100%, 50% var(--apex), 100% 100%);
 		background: linear-gradient(to top, #ccd4da, #d7dde2 90%);
+	}
+
+	/*
+	 * The seam shadows belong to the sealed envelope. A filtered pocket is a
+	 * composited layer, and while the letter rises the browser re-blends those
+	 * layers every frame: at 6x CPU throttle, dropping the filter cut DrawFrame
+	 * by about 400ms in the letter phase and removed almost every >8ms frame.
+	 * Keep the shadow while the seal is breaking, then drop it as the flap
+	 * starts moving, where the motion hides the change.
+	 */
+	.envelope[data-phase='closed'] .pocket-left,
+	.envelope[data-phase='breaking'] .pocket-left {
+		filter: drop-shadow(3px 5px 5px rgb(62 72 84 / 0.2));
+	}
+
+	.envelope[data-phase='closed'] .pocket-right,
+	.envelope[data-phase='breaking'] .pocket-right {
+		filter: drop-shadow(3px 5px 5px rgb(62 72 84 / 0.2));
 	}
 
 	.flap-wrap {

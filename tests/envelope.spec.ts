@@ -178,3 +178,28 @@ test('the seal stays on the envelope apex at every size', async ({ page }) => {
 		expect(apexY, `apex within viewport on ${size.label}`).toBeLessThan(size.height);
 	}
 });
+
+// The pocket drop shadows are deliberately limited to the sealed envelope.
+// They turn each pocket into a filtered layer that the letter animation has to
+// re-blend every frame, so they must be gone once the envelope starts moving.
+// The closed state keeps them, which is the look the envelope was designed with.
+test('the pocket shadows are dropped when the envelope opens', async ({ page }) => {
+	await page.setViewportSize({ width: 375, height: 812 });
+	await page.goto('/envelope/');
+
+	const pocketFilter = () =>
+		page.evaluate(() => getComputedStyle(document.querySelector<HTMLElement>('.pocket-left')!).filter);
+
+	await expect.poll(pocketFilter).not.toBe('none');
+
+	await page.getByRole('button', { name: 'Open the invitation' }).click();
+
+	await expect
+		.poll(async () => {
+			const phase = await page.locator('[data-card]').getAttribute('data-phase');
+			return phase !== 'closed' && phase !== 'breaking';
+		})
+		.toBe(true);
+
+	await expect.poll(pocketFilter).toBe('none');
+});
