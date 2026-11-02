@@ -620,5 +620,13 @@
 		.seal {
 			transition-duration: 240ms;
 		}
+		/*
+		 * Reduced motion skips `flap` and jumps to `leaving`, so keep the seam
+		 * shadows through the scene fade instead of snapping them off at the click.
+		 */
+		.envelope[data-phase='leaving'] .pocket-left,
+		.envelope[data-phase='leaving'] .pocket-right {
+			filter: drop-shadow(3px 5px 5px rgb(62 72 84 / 0.2));
+		}
 	}
 </style>
