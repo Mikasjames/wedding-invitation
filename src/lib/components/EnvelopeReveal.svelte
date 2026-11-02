@@ -488,10 +488,16 @@
 		position: absolute;
 		inset: 0;
 		border-radius: inherit;
-		background-image: url('/lace.svg');
 		background-repeat: repeat;
 		background-size: 140px 140px;
 		pointer-events: none;
+	}
+
+	/* The flap faces turn over, so their texture needs a back face. */
+	.flap-front::before,
+	.flap-front::after,
+	.flap-liner::before,
+	.flap-liner::after {
 		backface-visibility: hidden;
 		-webkit-backface-visibility: hidden;
 	}
@@ -500,17 +506,24 @@
 	.pocket::before,
 	.flap-front::before,
 	.flap-liner::before {
+		background-image: url('/lace.svg');
 		opacity: 0.11;
 		translate: 1px 1.1px;
 	}
 
+	/*
+	 * A white copy of the lace, rather than `filter: brightness(0) invert(1)`.
+	 * A filtered pseudo-element is its own render surface; the pockets and back
+	 * then stay on the same layer as the envelope instead of three each.
+	 * Regenerate lace-light.svg by replacing #000 with #fff in lace.svg.
+	 */
 	.env-back::after,
 	.pocket::after,
 	.flap-front::after,
 	.flap-liner::after {
+		background-image: url('/lace-light.svg');
 		opacity: 0.15;
 		translate: -0.9px -1px;
-		filter: brightness(0) invert(1);
 	}
 
 	.seal {
