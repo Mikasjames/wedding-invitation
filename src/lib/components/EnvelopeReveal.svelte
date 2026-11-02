@@ -82,9 +82,8 @@
 	 *
 	 * The tail matters: `content + contentFade` is the transition's *nominal* end,
 	 * but the transition does not begin when the seal is clicked. Svelte flushes
-	 * the class change a frame or two later, and `sealBurst` runs first, so
-	 * scheduling on the nominal end put the unlock fractionally ahead of the fade
-	 * it was meant to wait for.
+	 * the class change a frame or two later, so scheduling on the nominal end put
+	 * the unlock fractionally ahead of the fade it was meant to wait for.
 	 */
 	const SCROLL_TAIL = 120;
 
@@ -107,9 +106,10 @@
 		if (guard) return;
 		guard = true;
 
-		// Commit the reveal before the decorative work. The phase changes below
-		// are batched with this one, so the first frame is not waiting on the
-		// audio element or canvas-confetti's canvas setup.
+		// Mark the reveal before the decorative work. Svelte flushes the DOM in a
+		// microtask after this handler, so the phase changes below land with it;
+		// only the confetti setup is deferred, keeping its canvas out of that
+		// first paint.
 		openInvite();
 
 		if (withMusic) void ambience.play();
