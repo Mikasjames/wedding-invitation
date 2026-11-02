@@ -187,10 +187,20 @@ test('the pocket shadows are dropped when the envelope opens', async ({ page }) 
 	await page.setViewportSize({ width: 375, height: 812 });
 	await page.goto('/envelope/');
 
-	const pocketFilter = () =>
-		page.evaluate(() => getComputedStyle(document.querySelector<HTMLElement>('.pocket-left')!).filter);
+	const pocketFilters = () =>
+		page
+			.locator('.pocket-left, .pocket-right')
+			.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).filter));
 
-	await expect.poll(pocketFilter).not.toBe('none');
+	const allPocketFilters = async (expected: 'none' | 'shadow') => {
+		const filters = await pocketFilters();
+		return (
+			filters.length === 2 &&
+			filters.every((value) => (expected === 'none' ? value === 'none' : value !== 'none'))
+		);
+	};
+
+	await expect.poll(() => allPocketFilters('shadow')).toBe(true);
 
 	await page.getByRole('button', { name: 'Open the invitation' }).click();
 
@@ -201,5 +211,5 @@ test('the pocket shadows are dropped when the envelope opens', async ({ page }) 
 		})
 		.toBe(true);
 
-	await expect.poll(pocketFilter).toBe('none');
+	await expect.poll(() => allPocketFilters('none')).toBe(true);
 });
