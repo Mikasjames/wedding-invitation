@@ -1,3 +1,21 @@
+# Measuring the envelope reveal
+
+`scripts/perf-envelope.mjs` records a Chromium trace of `/envelope` under CPU
+throttling and reports main-thread and compositor cost per reveal phase. It is a
+reporting tool, not a CI gate; frame timings are noisy. Build and preview first:
+
+```sh
+pnpm build
+pnpm preview --port 4173
+pnpm perf:envelope
+```
+
+Override `PERF_URL`, `PERF_CPU` (default `6`), `PERF_VIEWPORT` (default
+`375x812`), or `PERF_TRACE` (default `envelope-trace.json` in the system temp
+directory) to compare another route, throttle, or screen size. The 1440x900
+viewport is the useful one for compositor work: it makes the envelope large
+enough for the per-frame cost to show up.
+
 # Importing the guest list
 
 `scripts/seed-rsvps.mjs` reads a CSV of households, assigns each one an invite
