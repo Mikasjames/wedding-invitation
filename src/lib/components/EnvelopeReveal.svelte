@@ -4,7 +4,7 @@
 	import { browser } from '$app/environment';
 	import { reveal, openInvite } from '$lib/state/reveal.svelte';
 	import { ambience } from '$lib/audio/ambience.svelte';
-	import { sealBurst } from '$lib/lib/confetti';
+	import { deferredSealBurst } from '$lib/lib/confetti';
 	import { wedding } from '$lib/lib/wedding';
 	import MusicToggle from './MusicToggle.svelte';
 	import Ornament from './Ornament.svelte';
@@ -32,7 +32,7 @@
 	let sealEl = $state<HTMLButtonElement | null>(null);
 	let guard = false;
 	let timers: ReturnType<typeof setTimeout>[] = [];
-	let confettiFrame = 0;
+	let cancelBurst: (() => void) | undefined;
 
 	/** When the envelope finishes leaving. Lifted out of `handleOpen` so the
 	 *  scroll unlock can be derived against it. */
@@ -98,7 +98,7 @@
 
 		return () => {
 			for (const t of timers) clearTimeout(t);
-			cancelAnimationFrame(confettiFrame);
+			cancelBurst?.();
 		};
 	});
 
@@ -114,13 +114,7 @@
 
 		if (withMusic) void ambience.play();
 
-		if (withConfetti) {
-			// Two frames: the first lets the reveal state paint, the second keeps
-			// the confetti's setup and first draw out of that same frame.
-			confettiFrame = requestAnimationFrame(() => {
-				confettiFrame = requestAnimationFrame(() => sealBurst(!reduced));
-			});
-		}
+		if (withConfetti) cancelBurst = deferredSealBurst(!reduced);
 
 		if (reduced) {
 			phase = 'leaving';
