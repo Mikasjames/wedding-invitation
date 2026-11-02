@@ -40,3 +40,19 @@ export function sealBurst(enabled = true) {
 		});
 	}, 210);
 }
+
+/**
+ * Wait two frames before building the confetti canvas, so the reveal's first
+ * paint is not queued behind canvas-confetti's setup and first draw. Returns a
+ * cancel function; calling sealBurst synchronously here added ~20ms to the
+ * click task at 6x CPU throttle.
+ */
+export function deferredSealBurst(enabled = true): () => void {
+	if (!enabled) return () => {};
+
+	let frame = requestAnimationFrame(() => {
+		frame = requestAnimationFrame(() => sealBurst());
+	});
+
+	return () => cancelAnimationFrame(frame);
+}

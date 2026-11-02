@@ -18,6 +18,7 @@
 	height={Math.round(1000 / ratio)}
 	loading="lazy"
 	decoding="async"
+	fetchpriority="low"
 	data-sprig={from ?? undefined}
 	class="pointer-events-none w-full h-auto select-none {className}"
 />

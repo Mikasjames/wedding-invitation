@@ -4,7 +4,7 @@
 	import { browser } from '$app/environment';
 	import { reveal, openInvite } from '$lib/state/reveal.svelte';
 	import { ambience } from '$lib/audio/ambience.svelte';
-	import { sealBurst } from '$lib/lib/confetti';
+	import { deferredSealBurst } from '$lib/lib/confetti';
 	import { wedding } from '$lib/lib/wedding';
 	import MusicToggle from './MusicToggle.svelte';
 	import Ornament from './Ornament.svelte';
@@ -32,7 +32,7 @@
 	let sealEl = $state<HTMLButtonElement | null>(null);
 	let guard = false;
 	let timers: ReturnType<typeof setTimeout>[] = [];
-	let confettiFrame = 0;
+	let cancelBurst: (() => void) | undefined;
 
 	/** When the envelope finishes leaving. Lifted out of `handleOpen` so the
 	 *  scroll unlock can be derived against it. */
@@ -82,9 +82,8 @@
 	 *
 	 * The tail matters: `content + contentFade` is the transition's *nominal* end,
 	 * but the transition does not begin when the seal is clicked. Svelte flushes
-	 * the class change a frame or two later, and `sealBurst` runs first, so
-	 * scheduling on the nominal end put the unlock fractionally ahead of the fade
-	 * it was meant to wait for.
+	 * the class change a frame or two later, so scheduling on the nominal end put
+	 * the unlock fractionally ahead of the fade it was meant to wait for.
 	 */
 	const SCROLL_TAIL = 120;
 
@@ -99,7 +98,7 @@
 
 		return () => {
 			for (const t of timers) clearTimeout(t);
-			cancelAnimationFrame(confettiFrame);
+			cancelBurst?.();
 		};
 	});
 
@@ -107,20 +106,15 @@
 		if (guard) return;
 		guard = true;
 
-		// Commit the reveal before the decorative work. The phase changes below
-		// are batched with this one, so the first frame is not waiting on the
-		// audio element or canvas-confetti's canvas setup.
+		// Mark the reveal before the decorative work. Svelte flushes the DOM in a
+		// microtask after this handler, so the phase changes below land with it;
+		// only the confetti setup is deferred, keeping its canvas out of that
+		// first paint.
 		openInvite();
 
 		if (withMusic) void ambience.play();
 
-		if (withConfetti) {
-			// Two frames: the first lets the reveal state paint, the second keeps
-			// the confetti's setup and first draw out of that same frame.
-			confettiFrame = requestAnimationFrame(() => {
-				confettiFrame = requestAnimationFrame(() => sealBurst(!reduced));
-			});
-		}
+		if (withConfetti) cancelBurst = deferredSealBurst(!reduced);
 
 		if (reduced) {
 			phase = 'leaving';
@@ -227,7 +221,13 @@
 						aria-label="Open the invitation"
 						class="seal group cursor-pointer disabled:cursor-default"
 					>
-						<img src="/seal.svg" alt="" aria-hidden="true" class="seal-wax" />
+						<img
+							src="/seal.svg"
+							alt=""
+							aria-hidden="true"
+							fetchpriority="high"
+							class="seal-wax"
+						/>
 					</button>
 				</div>
 			</div>
@@ -346,10 +346,15 @@
 		border-radius: 6px;
 		box-shadow: 0 2px 6px rgb(62 72 84 / 0.14);
 		pointer-events: none;
+		/*
+		 * Box-shadow is a paint property, so easing it for the full rise
+		 * re-rasterised the letter every frame. A 1ms transition behind the
+		 * same 80ms delay lands the larger shadow as the letter starts moving,
+		 * rather than while it is still sitting in the envelope.
+		 */
 		transition:
-			transform 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)),
-			box-shadow 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1));
-		transition-delay: 80ms;
+			transform 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)) 80ms,
+			box-shadow 1ms linear 80ms;
 		will-change: transform;
 	}
 
@@ -483,10 +488,16 @@
 		position: absolute;
 		inset: 0;
 		border-radius: inherit;
-		background-image: url('/lace.svg');
 		background-repeat: repeat;
 		background-size: 140px 140px;
 		pointer-events: none;
+	}
+
+	/* The flap faces turn over, so their texture needs a back face. */
+	.flap-front::before,
+	.flap-front::after,
+	.flap-liner::before,
+	.flap-liner::after {
 		backface-visibility: hidden;
 		-webkit-backface-visibility: hidden;
 	}
@@ -495,17 +506,24 @@
 	.pocket::before,
 	.flap-front::before,
 	.flap-liner::before {
+		background-image: url('/lace.svg');
 		opacity: 0.11;
 		translate: 1px 1.1px;
 	}
 
+	/*
+	 * A white copy of the lace, rather than `filter: brightness(0) invert(1)`.
+	 * A filtered pseudo-element is its own render surface; the pockets and back
+	 * then stay on the same layer as the envelope instead of three each.
+	 * Regenerate lace-light.svg by replacing #000 with #fff in lace.svg.
+	 */
 	.env-back::after,
 	.pocket::after,
 	.flap-front::after,
 	.flap-liner::after {
+		background-image: url('/lace-light.svg');
 		opacity: 0.15;
 		translate: -0.9px -1px;
-		filter: brightness(0) invert(1);
 	}
 
 	.seal {
@@ -593,7 +611,7 @@
 			animation: none !important;
 		}
 		.letter {
-			transition-duration: 240ms;
+			transition-duration: 240ms, 1ms;
 			transition-delay: 0ms;
 		}
 		.flap-wrap {
@@ -601,6 +619,14 @@
 		}
 		.seal {
 			transition-duration: 240ms;
+		}
+		/*
+		 * Reduced motion skips `flap` and jumps to `leaving`, so keep the seam
+		 * shadows through the scene fade instead of snapping them off at the click.
+		 */
+		.envelope[data-phase='leaving'] .pocket-left,
+		.envelope[data-phase='leaving'] .pocket-right {
+			filter: drop-shadow(3px 5px 5px rgb(62 72 84 / 0.2));
 		}
 	}
 </style>

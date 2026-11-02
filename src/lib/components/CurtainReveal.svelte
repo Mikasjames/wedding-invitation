@@ -4,7 +4,7 @@
 	import { browser } from '$app/environment';
 	import { reveal, openInvite } from '$lib/state/reveal.svelte';
 	import { ambience } from '$lib/audio/ambience.svelte';
-	import { sealBurst } from '$lib/lib/confetti';
+	import { deferredSealBurst } from '$lib/lib/confetti';
 	import MusicToggle from './MusicToggle.svelte';
 
 	interface Props {
@@ -29,6 +29,7 @@
 	let sealEl = $state<HTMLButtonElement | null>(null);
 	let curtainEl = $state<HTMLDivElement | null>(null);
 	let guard = false;
+	let cancelBurst: (() => void) | undefined;
 
 	const SIDES = ['left', 'right'] as const;
 
@@ -126,6 +127,7 @@
 			ro.disconnect();
 			cancelAnimationFrame(frame);
 			clearTimeout(dismissTimer);
+			cancelBurst?.();
 		};
 	});
 
@@ -138,7 +140,7 @@
 
 		if (withMusic) void ambience.play();
 
-		if (withConfetti) sealBurst(!reduced);
+		if (withConfetti) cancelBurst = deferredSealBurst(!reduced);
 
 		const run = animateCurtain();
 
@@ -251,6 +253,7 @@
 						src="/seal.svg"
 						alt=""
 						aria-hidden="true"
+						fetchpriority="high"
 						class="relative z-10 h-32 w-32 object-contain drop-shadow-[0_18px_24px_rgb(91_104_115/0.45)]"
 					/>
 

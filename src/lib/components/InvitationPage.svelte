@@ -26,6 +26,8 @@
 
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:image" content="/images/og.png" />
+
+	<link rel="preload" as="image" href="/seal.svg" fetchpriority="high" />
 </svelte:head>
 
 <Reveal {kind} monogram={wedding.monogram} hint="Tap the seal to open">
