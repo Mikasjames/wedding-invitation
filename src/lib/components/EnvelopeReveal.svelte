@@ -227,7 +227,13 @@
 						aria-label="Open the invitation"
 						class="seal group cursor-pointer disabled:cursor-default"
 					>
-						<img src="/seal.svg" alt="" aria-hidden="true" class="seal-wax" />
+						<img
+							src="/seal.svg"
+							alt=""
+							aria-hidden="true"
+							fetchpriority="high"
+							class="seal-wax"
+						/>
 					</button>
 				</div>
 			</div>
