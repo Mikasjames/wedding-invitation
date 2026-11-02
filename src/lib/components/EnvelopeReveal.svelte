@@ -5,6 +5,7 @@
 	import { reveal, openInvite } from '$lib/state/reveal.svelte';
 	import { ambience } from '$lib/audio/ambience.svelte';
 	import { deferredSealBurst } from '$lib/lib/confetti';
+	import { confettiScale, isLowEnd } from '$lib/lib/device';
 	import { wedding } from '$lib/lib/wedding';
 	import MusicToggle from './MusicToggle.svelte';
 	import Ornament from './Ornament.svelte';
@@ -28,6 +29,7 @@
 	type Phase = 'closed' | 'breaking' | 'flap' | 'letter' | 'leaving' | 'gone';
 
 	let reduced = $state(false);
+	let lowEnd = $state(browser ? isLowEnd() : false);
 	let phase = $state<Phase>(reveal.opened ? 'gone' : 'closed');
 	let sealEl = $state<HTMLButtonElement | null>(null);
 	let guard = false;
@@ -114,7 +116,10 @@
 
 		if (withMusic) void ambience.play();
 
-		if (withConfetti) cancelBurst = deferredSealBurst(!reduced);
+		if (withConfetti) {
+			const scale = confettiScale();
+			if (scale > 0 && !reduced) cancelBurst = deferredSealBurst(true, scale);
+		}
 
 		if (reduced) {
 			phase = 'leaving';
@@ -174,7 +179,7 @@
 		aria-modal="true"
 		aria-label="Wedding invitation — press the seal to open"
 	>
-		<div class="scene absolute inset-0" class:is-leaving={leaving}>
+		<div class="scene absolute inset-0" class:is-leaving={leaving} class:low-end={lowEnd}>
 			<div class="paper absolute inset-0" aria-hidden="true"></div>
 
 			<div class="folds absolute inset-0">
@@ -232,7 +237,9 @@
 				</div>
 			</div>
 
-			<div class="glaze absolute inset-0" aria-hidden="true"></div>
+			{#if !lowEnd}
+				<div class="glaze absolute inset-0" aria-hidden="true"></div>
+			{/if}
 
 			<p
 				class="hint absolute bottom-[7%] left-1/2 z-10 -translate-x-1/2 font-body text-[10px] font-medium
@@ -281,6 +288,17 @@
 			--perspective: calc(var(--column) * 3);
 			--radius: 14px;
 		}
+	}
+
+	.scene.low-end .env-back::before,
+	.scene.low-end .pocket::before,
+	.scene.low-end .flap-front::before,
+	.scene.low-end .flap-liner::before,
+	.scene.low-end .env-back::after,
+	.scene.low-end .pocket::after,
+	.scene.low-end .flap-front::after,
+	.scene.low-end .flap-liner::after {
+		background-image: none;
 	}
 
 	.scene.is-leaving {

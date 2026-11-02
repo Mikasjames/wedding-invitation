@@ -5,6 +5,7 @@
 	import { reveal, openInvite } from '$lib/state/reveal.svelte';
 	import { ambience } from '$lib/audio/ambience.svelte';
 	import { deferredSealBurst } from '$lib/lib/confetti';
+	import { confettiScale, isLowEnd } from '$lib/lib/device';
 	import MusicToggle from './MusicToggle.svelte';
 
 	interface Props {
@@ -24,6 +25,7 @@
 	}: Props = $props();
 
 	let reduced = $state(false);
+	let lowEnd = $state(browser ? isLowEnd() : false);
 	let breaking = $state(false);
 	let dismissed = $state(reveal.opened);
 	let sealEl = $state<HTMLButtonElement | null>(null);
@@ -140,7 +142,10 @@
 
 		if (withMusic) void ambience.play();
 
-		if (withConfetti) cancelBurst = deferredSealBurst(!reduced);
+		if (withConfetti) {
+			const scale = confettiScale();
+			if (scale > 0 && !reduced) cancelBurst = deferredSealBurst(true, scale);
+		}
 
 		const run = animateCurtain();
 
@@ -191,6 +196,7 @@
 		inert={dismissed}
 		class="fixed inset-0 z-50 overflow-hidden
 		       {dismissed ? 'pointer-events-none invisible' : ''}"
+		class:low-end={lowEnd}
 		style="padding-top: env(safe-area-inset-top)"
 		role="dialog"
 		aria-modal="true"
@@ -400,6 +406,10 @@
 	.seal:disabled {
 		transform: translateY(-30px) rotate(-7deg) scale(1.14);
 		opacity: 0;
+	}
+
+	.low-end .panel::after {
+		display: none;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
