@@ -346,10 +346,15 @@
 		border-radius: 6px;
 		box-shadow: 0 2px 6px rgb(62 72 84 / 0.14);
 		pointer-events: none;
+		/*
+		 * Box-shadow is a paint property, so easing it for the full rise
+		 * re-rasterised the letter every frame. A 1ms transition behind the
+		 * same 80ms delay lands the larger shadow as the letter starts moving,
+		 * rather than while it is still sitting in the envelope.
+		 */
 		transition:
-			transform 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)),
-			box-shadow 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1));
-		transition-delay: 80ms;
+			transform 900ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)) 80ms,
+			box-shadow 1ms linear 80ms;
 		will-change: transform;
 	}
 
@@ -593,7 +598,7 @@
 			animation: none !important;
 		}
 		.letter {
-			transition-duration: 240ms;
+			transition-duration: 240ms, 1ms;
 			transition-delay: 0ms;
 		}
 		.flap-wrap {
