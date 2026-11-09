@@ -122,6 +122,8 @@
 @layer base {
 	html {
 		-webkit-text-size-adjust: 100%;
+		scroll-behavior: smooth;
+		scroll-padding-top: 1.5rem;
 	}
 
 	body {
@@ -131,6 +133,49 @@
 		font-synthesis-weight: none;
 		-webkit-font-smoothing: antialiased;
 		text-rendering: optimizeLegibility;
-		overscroll-behavior-y: none;
+		overscroll-behavior-y: auto;
+	}
+}
+
+/*
+	Scroll-reveal utilities. Applied via the `scrollReveal` action in
+	`$lib/actions/scroll-reveal.ts`. Elements start hidden and fade/slide
+	into place once they enter the viewport.
+*/
+.scroll-reveal {
+	opacity: 0;
+	transition:
+		opacity 0.9s var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)),
+		transform 0.9s var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1));
+	transition-delay: var(--reveal-delay, 0ms);
+	will-change: opacity, transform;
+}
+
+.scroll-reveal--up {
+	transform: translateY(32px);
+}
+.scroll-reveal--fade {
+	transform: none;
+}
+.scroll-reveal--scale {
+	transform: scale(0.96);
+}
+.scroll-reveal--left {
+	transform: translateX(-32px);
+}
+.scroll-reveal--right {
+	transform: translateX(32px);
+}
+
+.scroll-reveal.revealed {
+	opacity: 1;
+	transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.scroll-reveal {
+		opacity: 1;
+		transform: none;
+		transition: none;
 	}
 }
