@@ -6,6 +6,8 @@
 	import { reveal } from '$lib/state/reveal.svelte';
 	import { onMount } from 'svelte';
 
+	let sprigLayer = $state<HTMLDivElement | null>(null);
+
 	// The page is prerendered, so a `Date.now()` read during render would bake
 	// the gap into the static HTML and freeze it there for every guest who
 	// never runs the client bundle. Read the clock on mount instead and show
@@ -20,7 +22,28 @@
 			if (hasStarted(wedding.start, new Date(now))) clearInterval(id);
 		}, 60_000);
 
-		return () => clearInterval(id);
+		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		let raf = 0;
+		let ticking = false;
+		const update = () => {
+			ticking = false;
+			if (!sprigLayer || reduced) return;
+			const y = Math.min(window.scrollY, window.innerHeight);
+			const offset = y * 0.18;
+			sprigLayer.style.transform = `translate3d(0, ${offset}px, 0)`;
+		};
+		const onScroll = () => {
+			if (ticking) return;
+			ticking = true;
+			raf = requestAnimationFrame(update);
+		};
+		if (!reduced) window.addEventListener('scroll', onScroll, { passive: true });
+
+		return () => {
+			clearInterval(id);
+			if (!reduced) window.removeEventListener('scroll', onScroll);
+			if (raf) cancelAnimationFrame(raf);
+		};
 	});
 
 	const started = $derived(now > 0 && hasStarted(wedding.start, new Date(now)));
@@ -61,7 +84,8 @@
 		for pixel as it was.
 	-->
 	<div
-		class="pointer-events-none absolute inset-0 z-0"
+		bind:this={sprigLayer}
+		class="pointer-events-none absolute inset-0 z-0 will-change-transform"
 		class:is-revealed={reveal.opened}
 		aria-hidden="true"
 	>
