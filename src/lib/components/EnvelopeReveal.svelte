@@ -23,7 +23,7 @@
 		monogram = 'M & L',
 		hint = 'Tap the seal to open',
 		withMusic = true,
-		withConfetti = true
+		withConfetti = false
 	}: Props = $props();
 
 	type Phase = 'closed' | 'breaking' | 'flap' | 'letter' | 'leaving' | 'gone';
