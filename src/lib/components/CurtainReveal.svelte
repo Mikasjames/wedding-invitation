@@ -4,8 +4,14 @@
 	import { browser } from '$app/environment';
 	import { reveal, openInvite } from '$lib/state/reveal.svelte';
 	import { ambience } from '$lib/audio/ambience.svelte';
-	import { deferredSealBurst } from '$lib/lib/confetti';
 	import { confettiScale, isLowEnd } from '$lib/lib/device';
+	import {
+		celebrationFromSearch,
+		DEFAULT_CELEBRATION,
+		resolveCelebration,
+		type CelebrationKind
+	} from '$lib/lib/celebration';
+	import CelebrationFx from './CelebrationFx.svelte';
 	import MusicToggle from './MusicToggle.svelte';
 
 	interface Props {
@@ -13,6 +19,9 @@
 		monogram?: string;
 		hint?: string;
 		withMusic?: boolean;
+		/** Which effect plays on open. See `$lib/lib/celebration`. */
+		celebration?: CelebrationKind;
+		/** @deprecated Use `celebration`; kept so existing callers keep working. */
 		withConfetti?: boolean;
 	}
 
@@ -21,7 +30,8 @@
 		monogram = 'M & L',
 		hint = 'Tap the seal to open',
 		withMusic = true,
-		withConfetti = true
+		celebration = DEFAULT_CELEBRATION,
+		withConfetti
 	}: Props = $props();
 
 	let reduced = $state(false);
@@ -31,7 +41,21 @@
 	let sealEl = $state<HTMLButtonElement | null>(null);
 	let curtainEl = $state<HTMLDivElement | null>(null);
 	let guard = false;
-	let cancelBurst: (() => void) | undefined;
+	/** Resolved from props, then optionally overridden by `?celebrate=` on mount. */
+	const configuredKind = $derived(
+		withConfetti === undefined ? celebration : withConfetti ? 'confetti' : 'none'
+	);
+	let celebrationOverride = $state<CelebrationKind | undefined>(undefined);
+	const celebrationKind = $derived(celebrationOverride ?? configuredKind);
+	let burst = $state(0);
+
+	const celebrationState = $derived(
+		resolveCelebration(celebrationKind, {
+			reducedMotion: reduced,
+			lowEnd,
+			confettiScale: confettiScale()
+		})
+	);
 
 	const SIDES = ['left', 'right'] as const;
 
@@ -118,6 +142,7 @@
 
 	onMount(() => {
 		reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		celebrationOverride = celebrationFromSearch(window.location.search, configuredKind);
 
 		const ro = new ResizeObserver(() => (cover = panelCover()));
 		if (curtainEl) ro.observe(curtainEl);
@@ -129,7 +154,6 @@
 			ro.disconnect();
 			cancelAnimationFrame(frame);
 			clearTimeout(dismissTimer);
-			cancelBurst?.();
 		};
 	});
 
@@ -142,10 +166,7 @@
 
 		if (withMusic) void ambience.play();
 
-		if (withConfetti) {
-			const scale = confettiScale();
-			if (scale > 0 && !reduced) cancelBurst = deferredSealBurst(true, scale);
-		}
+		if (celebrationState.kind !== 'none') burst += 1;
 
 		const run = animateCurtain();
 
@@ -247,23 +268,32 @@
 		<div class="absolute inset-0 grid place-items-center px-8">
 
 			<div class="flex flex-col items-center text-center">
-				<button
-					bind:this={sealEl}
-					type="button"
-					onclick={handleOpen}
-					disabled={breaking}
-					aria-label="Open the invitation"
-					class="seal group relative cursor-pointer disabled:cursor-default"
-				>
-					<img
-						src="/seal.svg"
-						alt=""
-						aria-hidden="true"
-						fetchpriority="high"
-						class="relative z-10 h-32 w-32 object-contain drop-shadow-[0_18px_24px_rgb(91_104_115/0.45)]"
-					/>
+				<div class="seal-anchor relative">
+					<button
+						bind:this={sealEl}
+						type="button"
+						onclick={handleOpen}
+						disabled={breaking}
+						aria-label="Open the invitation"
+						class="seal group relative cursor-pointer disabled:cursor-default"
+					>
+						<img
+							src="/seal.svg"
+							alt=""
+							aria-hidden="true"
+							fetchpriority="high"
+							class="relative z-10 h-32 w-32 object-contain drop-shadow-[0_18px_24px_rgb(91_104_115/0.45)]"
+						/>
 
-				</button>
+					</button>
+
+					<CelebrationFx
+						kind={celebrationState.kind}
+						tier={celebrationState.tier}
+						scale={celebrationState.scale}
+						{burst}
+					/>
+				</div>
 
 				<p
 					class="mt-8 font-body text-[10px] font-medium tracking-[0.3em] text-champagne
@@ -384,6 +414,10 @@
 
 	.panel-wrap.is-closed {
 		transform: none;
+	}
+
+	.seal-anchor {
+		position: relative;
 	}
 
 	.seal {

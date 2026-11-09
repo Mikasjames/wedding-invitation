@@ -4,9 +4,15 @@
 	import { browser } from '$app/environment';
 	import { reveal, openInvite } from '$lib/state/reveal.svelte';
 	import { ambience } from '$lib/audio/ambience.svelte';
-	import { deferredSealBurst } from '$lib/lib/confetti';
 	import { confettiScale, isLowEnd } from '$lib/lib/device';
+	import {
+		celebrationFromSearch,
+		DEFAULT_CELEBRATION,
+		resolveCelebration,
+		type CelebrationKind
+	} from '$lib/lib/celebration';
 	import { wedding } from '$lib/lib/wedding';
+	import CelebrationFx from './CelebrationFx.svelte';
 	import MusicToggle from './MusicToggle.svelte';
 	import Ornament from './Ornament.svelte';
 
@@ -15,6 +21,9 @@
 		monogram?: string;
 		hint?: string;
 		withMusic?: boolean;
+		/** Which effect plays on open. See `$lib/lib/celebration`. */
+		celebration?: CelebrationKind;
+		/** @deprecated Use `celebration`; kept so existing callers keep working. */
 		withConfetti?: boolean;
 	}
 
@@ -23,7 +32,8 @@
 		monogram = 'M & L',
 		hint = 'Tap the seal to open',
 		withMusic = true,
-		withConfetti = false
+		celebration = DEFAULT_CELEBRATION,
+		withConfetti
 	}: Props = $props();
 
 	type Phase = 'closed' | 'breaking' | 'flap' | 'letter' | 'leaving' | 'gone';
@@ -34,7 +44,21 @@
 	let sealEl = $state<HTMLButtonElement | null>(null);
 	let guard = false;
 	let timers: ReturnType<typeof setTimeout>[] = [];
-	let cancelBurst: (() => void) | undefined;
+	/** Resolved from props, then optionally overridden by `?celebrate=` on mount. */
+	const configuredKind = $derived(
+		withConfetti === undefined ? celebration : withConfetti ? 'confetti' : 'none'
+	);
+	let celebrationOverride = $state<CelebrationKind | undefined>(undefined);
+	const celebrationKind = $derived(celebrationOverride ?? configuredKind);
+	let burst = $state(0);
+
+	const celebrationState = $derived(
+		resolveCelebration(celebrationKind, {
+			reducedMotion: reduced,
+			lowEnd,
+			confettiScale: confettiScale()
+		})
+	);
 
 	/** When the envelope finishes leaving. Lifted out of `handleOpen` so the
 	 *  scroll unlock can be derived against it. */
@@ -95,12 +119,12 @@
 
 	onMount(() => {
 		reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		celebrationOverride = celebrationFromSearch(window.location.search, configuredKind);
 
 		sealEl?.focus({ preventScroll: true });
 
 		return () => {
 			for (const t of timers) clearTimeout(t);
-			cancelBurst?.();
 		};
 	});
 
@@ -116,10 +140,7 @@
 
 		if (withMusic) void ambience.play();
 
-		if (withConfetti) {
-			const scale = confettiScale();
-			if (scale > 0 && !reduced) cancelBurst = deferredSealBurst(true, scale);
-		}
+		if (celebrationState.kind !== 'none') burst += 1;
 
 		if (reduced) {
 			phase = 'leaving';
@@ -234,6 +255,15 @@
 							class="seal-wax"
 						/>
 					</button>
+
+					<div class="seal-fx">
+						<CelebrationFx
+							kind={celebrationState.kind}
+							tier={celebrationState.tier}
+							scale={celebrationState.scale}
+							{burst}
+						/>
+					</div>
 				</div>
 			</div>
 
@@ -333,6 +363,8 @@
 		width: var(--column);
 		aspect-ratio: var(--shape);
 		border-radius: var(--radius);
+		/* Shared by the seal and its celebration so the burst stays anchored. */
+		--seal-w: clamp(88px, 24%, 128px);
 	}
 
 	.env-back {
@@ -555,12 +587,24 @@
 		   wider, so this would clamp to its cap and the seal would shrink from
 		   a quarter of the envelope to a sixth of it. Key it to height there
 		   instead, which is what sizes the envelope at that breakpoint. */
-		width: clamp(88px, 24%, 128px);
+		width: var(--seal-w);
 		aspect-ratio: 432 / 446;
 		border-radius: 9999px;
 		transition:
 			transform 420ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)),
 			opacity 420ms ease-out;
+	}
+
+	/* Same box as the seal, so the bloom and shards originate on the wax. */
+	.seal-fx {
+		position: absolute;
+		left: 50%;
+		top: var(--apex);
+		translate: -50% -50%;
+		z-index: 6;
+		width: var(--seal-w);
+		aspect-ratio: 432 / 446;
+		pointer-events: none;
 	}
 
 	.seal-wax {
@@ -609,8 +653,8 @@
 		/* 0.28 of the envelope's height holds a constant 18.7% of its width
 		   (0.28 / 1.5), so the seal keeps its weight on the apex at any size
 		   instead of clamping to its portrait cap. */
-		.seal {
-			width: min(calc(var(--env-h) * 0.28), 176px);
+		.envelope {
+			--seal-w: min(calc(var(--env-h) * 0.28), 176px);
 		}
 
 		/* Sized off height so the letter and its padding scale together. The
