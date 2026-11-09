@@ -20,6 +20,22 @@ pnpm test:e2e    # playwright
 
 The e2e suite builds with the Firebase config blanked out — see `playwright.config.ts` — so it exercises the "RSVPs are not open yet" path and never sends a request to a real Firestore project.
 
+## Reveal celebration
+
+Which effect plays when a guest breaks the seal is a value, not a branch in the
+reveal components. `src/lib/lib/celebration.ts` owns it:
+
+- `DEFAULT_CELEBRATION` is what every reveal uses. Change that one line to
+  `'confetti'` or `'none'` to swap the whole site.
+- `?celebrate=seal|confetti|none` overrides it for a single page load, so the
+  alternatives can be compared on a real phone without a rebuild.
+- `prefers-reduced-motion` disables the effect entirely, and `isLowEnd()`
+  trims the CSS burst to its bloom and a few shards.
+
+The default `seal` effect is `CelebrationFx.svelte`: a warm bloom, a ripple and
+a handful of wax shards, all animated with `transform`/`opacity` only. It does
+not use a canvas or a per-frame script.
+
 ## Building
 
 ```sh
