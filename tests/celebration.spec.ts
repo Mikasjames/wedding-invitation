@@ -40,6 +40,22 @@ test('?celebrate=confetti keeps the canvas implementation selectable', async ({ 
 	await expect(page.locator('canvas')).toHaveCount(1, { timeout: 4_000 });
 });
 
+test('?celebrateSpeed scales the burst animation', async ({ page }) => {
+	const shardDuration = async (speed: number) => {
+		await page.goto(`/envelope/?celebrate=seal&celebrateSpeed=${speed}`);
+		await page.getByRole('button', { name: 'Open the invitation' }).click();
+
+		return await page.locator('.shard').first().evaluate((element) => {
+			const value = getComputedStyle(element).animationDuration;
+			return value.endsWith('ms') ? parseFloat(value) : parseFloat(value) * 1000;
+		});
+	};
+
+	// Authored shard duration is 860ms, so 1.25 becomes 1075ms.
+	expect(await shardDuration(1)).toBeLessThan(950);
+	expect(await shardDuration(1.25)).toBeGreaterThan(1000);
+});
+
 test.describe('reduced motion', () => {
 	test.use({ reducedMotion: 'reduce' });
 

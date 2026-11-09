@@ -7,8 +7,14 @@
 	 * The CSS effect only animates `transform`/`opacity`/`scale`, all on small
 	 * pre-painted elements. No filters, shadows, masks, or per-frame script.
 	 */
+	import { onMount } from 'svelte';
 	import { deferredSealBurst } from '$lib/lib/confetti';
-	import type { CelebrationKind, CelebrationTier } from '$lib/lib/celebration';
+	import {
+		celebrationSpeedFromSearch,
+		DEFAULT_CELEBRATION_SPEED,
+		type CelebrationKind,
+		type CelebrationTier
+	} from '$lib/lib/celebration';
 
 	interface Props {
 		kind?: CelebrationKind;
@@ -21,19 +27,32 @@
 	let { kind = 'none', tier = 'full', scale = 1, burst = 0 }: Props = $props();
 
 	let visible = $state(false);
+	/** 1 plays the authored timings; >1 slows every animation down. */
+	let speed = $state(DEFAULT_CELEBRATION_SPEED);
+
+	/** Longest animation (dust: 950ms + 60ms delay) plus a settle frame. */
+	const BASE_LIFETIME = 1010;
+	const SETTLE = 150;
+
+	onMount(() => {
+		speed = celebrationSpeedFromSearch(window.location.search);
+	});
 
 	/**
 	 * Each shard is a static clip-path on its own small element, moved outward
 	 * with the individual `translate`/`rotate` properties. Keeping them as
 	 * separate transforms means the browser can hand the whole thing to the
 	 * compositor instead of re-rasterising a filter per frame.
+	 *
+	 * Distances stay short on purpose: a frame drop at 30fps is less visible
+	 * when a shard only advances a few pixels per frame.
 	 */
 	const SHARDS = [
-		{ tx: '-66px', ty: '-54px', rot: '-64deg', delay: '60ms', shape: 'polygon(50% 0%, 100% 100%, 0% 82%)' },
-		{ tx: '58px', ty: '-62px', rot: '52deg', delay: '84ms', shape: 'polygon(0% 12%, 100% 0%, 22% 100%)' },
-		{ tx: '72px', ty: '24px', rot: '84deg', delay: '104ms', shape: 'polygon(50% 0%, 100% 62%, 12% 100%)' },
-		{ tx: '22px', ty: '70px', rot: '-32deg', delay: '74ms', shape: 'polygon(8% 0%, 100% 26%, 74% 100%, 0% 76%)' },
-		{ tx: '-70px', ty: '34px', rot: '-78deg', delay: '96ms', shape: 'polygon(50% 0%, 100% 42%, 62% 100%, 0% 68%)' }
+		{ tx: '-50px', ty: '-42px', rot: '-64deg', delay: '60ms', shape: 'polygon(50% 0%, 100% 100%, 0% 82%)' },
+		{ tx: '46px', ty: '-48px', rot: '52deg', delay: '84ms', shape: 'polygon(0% 12%, 100% 0%, 22% 100%)' },
+		{ tx: '56px', ty: '20px', rot: '84deg', delay: '104ms', shape: 'polygon(50% 0%, 100% 62%, 12% 100%)' },
+		{ tx: '18px', ty: '54px', rot: '-32deg', delay: '74ms', shape: 'polygon(8% 0%, 100% 26%, 74% 100%, 0% 76%)' },
+		{ tx: '-54px', ty: '28px', rot: '-78deg', delay: '96ms', shape: 'polygon(50% 0%, 100% 42%, 62% 100%, 0% 68%)' }
 	];
 
 	/**
@@ -41,14 +60,14 @@
 	 * the children are painted once and only the wrapper scales and fades.
 	 */
 	const DUST = [
-		{ x: '-38px', y: '-30px', size: '5px' },
-		{ x: '12px', y: '-48px', size: '4px' },
-		{ x: '44px', y: '-22px', size: '6px' },
-		{ x: '52px', y: '24px', size: '4px' },
-		{ x: '20px', y: '48px', size: '5px' },
-		{ x: '-24px', y: '42px', size: '4px' },
-		{ x: '-50px', y: '12px', size: '6px' },
-		{ x: '-8px', y: '-8px', size: '3px' }
+		{ x: '-32px', y: '-26px', size: '5px' },
+		{ x: '10px', y: '-40px', size: '4px' },
+		{ x: '38px', y: '-18px', size: '6px' },
+		{ x: '44px', y: '20px', size: '4px' },
+		{ x: '16px', y: '42px', size: '5px' },
+		{ x: '-20px', y: '36px', size: '4px' },
+		{ x: '-42px', y: '10px', size: '6px' },
+		{ x: '-6px', y: '-6px', size: '3px' }
 	];
 
 	const shards = $derived(tier === 'reduced' ? SHARDS.slice(0, 3) : SHARDS);
@@ -63,7 +82,10 @@
 		if (kind !== 'seal') return;
 
 		visible = true;
-		const timer = setTimeout(() => (visible = false), 1600);
+		const timer = setTimeout(
+			() => (visible = false),
+			Math.round(BASE_LIFETIME * speed + SETTLE)
+		);
 		return () => clearTimeout(timer);
 	});
 </script>
@@ -73,6 +95,7 @@
 		class="celebration"
 		data-celebration="seal"
 		data-tier={tier}
+		style="--speed: {speed}"
 		aria-hidden="true"
 	>
 		<span class="bloom"></span>
@@ -133,7 +156,8 @@
 			transparent 70%
 		);
 		opacity: 0;
-		animation: bloom 760ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)) both;
+		animation: bloom calc(760ms * var(--speed, 1))
+			var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)) both;
 	}
 
 	@keyframes bloom {
@@ -158,7 +182,7 @@
 		border: 1.5px solid rgb(95 109 120 / 0.42);
 		border-radius: 50%;
 		opacity: 0;
-		animation: ripple 700ms ease-out both;
+		animation: ripple calc(700ms * var(--speed, 1)) ease-out both;
 	}
 
 	@keyframes ripple {
@@ -183,7 +207,9 @@
 			var(--color-rose-deep, #74838f)
 		);
 		opacity: 0;
-		animation: shard 860ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)) var(--delay, 0ms) both;
+		animation: shard calc(860ms * var(--speed, 1))
+			var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1))
+			calc(var(--delay, 0ms) * var(--speed, 1)) both;
 	}
 
 	@keyframes shard {
@@ -208,7 +234,9 @@
 		width: 1px;
 		height: 1px;
 		opacity: 0;
-		animation: dust 950ms var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1)) 60ms both;
+		animation: dust calc(950ms * var(--speed, 1))
+			var(--ease-luxury, cubic-bezier(0.22, 1, 0.36, 1))
+			calc(60ms * var(--speed, 1)) both;
 	}
 
 	.dust i {

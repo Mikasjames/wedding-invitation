@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
 	celebrationFromSearch,
+	celebrationSpeedFromSearch,
 	DEFAULT_CELEBRATION,
+	DEFAULT_CELEBRATION_SPEED,
 	resolveCelebration,
 	type CelebrationInput
 } from './celebration';
@@ -70,5 +72,24 @@ describe('celebrationFromSearch', () => {
 		expect(celebrationFromSearch('?celebrate=fireworks')).toBe(DEFAULT_CELEBRATION);
 		expect(celebrationFromSearch('?celebrate=seal', 'none')).toBe('seal');
 		expect(celebrationFromSearch('', 'none')).toBe('none');
+	});
+});
+
+describe('celebrationSpeedFromSearch', () => {
+	it('reads a decimal multiplier', () => {
+		expect(celebrationSpeedFromSearch('?celebrateSpeed=1.25')).toBe(1.25);
+		expect(celebrationSpeedFromSearch('?celebrateSpeed=1')).toBe(1);
+	});
+
+	// The clamp keeps a hand-edited URL from turning the burst into a slideshow.
+	it('clamps values to the safe range', () => {
+		expect(celebrationSpeedFromSearch('?celebrateSpeed=4')).toBe(1.5);
+		expect(celebrationSpeedFromSearch('?celebrateSpeed=0.1')).toBe(0.75);
+	});
+
+	it('falls back on a missing or invalid value', () => {
+		expect(celebrationSpeedFromSearch('')).toBe(DEFAULT_CELEBRATION_SPEED);
+		expect(celebrationSpeedFromSearch('?celebrateSpeed=fast')).toBe(DEFAULT_CELEBRATION_SPEED);
+		expect(celebrationSpeedFromSearch('', 1.3)).toBe(1.3);
 	});
 });
