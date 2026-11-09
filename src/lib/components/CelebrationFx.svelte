@@ -57,7 +57,7 @@
 		if (burst === 0) return;
 
 		if (kind === 'confetti') {
-			return deferredSealBurst(true, scale);
+			return deferredSealBurst(scale);
 		}
 
 		if (kind !== 'seal') return;
