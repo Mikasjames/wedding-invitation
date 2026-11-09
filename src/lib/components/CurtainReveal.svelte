@@ -21,8 +21,6 @@
 		withMusic?: boolean;
 		/** Which effect plays on open. See `$lib/lib/celebration`. */
 		celebration?: CelebrationKind;
-		/** @deprecated Use `celebration`; kept so existing callers keep working. */
-		withConfetti?: boolean;
 	}
 
 	let {
@@ -30,8 +28,7 @@
 		monogram = 'M & L',
 		hint = 'Tap the seal to open',
 		withMusic = true,
-		celebration = DEFAULT_CELEBRATION,
-		withConfetti
+		celebration = DEFAULT_CELEBRATION
 	}: Props = $props();
 
 	let reduced = $state(false);
@@ -42,11 +39,8 @@
 	let curtainEl = $state<HTMLDivElement | null>(null);
 	let guard = false;
 	/** Resolved from props, then optionally overridden by `?celebrate=` on mount. */
-	const configuredKind = $derived(
-		withConfetti === undefined ? celebration : withConfetti ? 'confetti' : 'none'
-	);
 	let celebrationOverride = $state<CelebrationKind | undefined>(undefined);
-	const celebrationKind = $derived(celebrationOverride ?? configuredKind);
+	const celebrationKind = $derived(celebrationOverride ?? celebration);
 	let burst = $state(0);
 
 	const celebrationState = $derived(
@@ -142,7 +136,7 @@
 
 	onMount(() => {
 		reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-		celebrationOverride = celebrationFromSearch(window.location.search, configuredKind);
+		celebrationOverride = celebrationFromSearch(window.location.search, celebration);
 
 		const ro = new ResizeObserver(() => (cover = panelCover()));
 		if (curtainEl) ro.observe(curtainEl);

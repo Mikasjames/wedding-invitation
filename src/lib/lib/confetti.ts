@@ -2,8 +2,7 @@ import confetti from 'canvas-confetti';
 const GOLD = ['#ddc9b4', '#cdb59b', '#c4c6cd', '#ebded5'];
 const PETAL = ['#9ba3ac', '#c4c6cd', '#74838f'];
 
-export function sealBurst(enabled = true, scale = 1) {
-	if (!enabled) return;
+export function sealBurst(scale = 1) {
 	const s = Math.max(0.25, Math.min(1, scale));
 
 	confetti({
@@ -44,16 +43,16 @@ export function sealBurst(enabled = true, scale = 1) {
 /**
  * Wait two frames before building the confetti canvas, so the reveal's first
  * paint is not queued behind canvas-confetti's setup and first draw. Returns a
- * cancel function; calling sealBurst synchronously here added ~20ms to the
+ * cancel function; calling `sealBurst` synchronously here added ~20ms to the
  * click task at 6x CPU throttle.
  *
  * `scale` trims the burst on weaker devices; 0 disables it entirely.
  */
-export function deferredSealBurst(enabled = true, scale = 1): () => void {
-	if (!enabled || scale <= 0) return () => {};
+export function deferredSealBurst(scale = 1): () => void {
+	if (scale <= 0) return () => {};
 
 	let frame = requestAnimationFrame(() => {
-		frame = requestAnimationFrame(() => sealBurst(true, scale));
+		frame = requestAnimationFrame(() => sealBurst(scale));
 	});
 
 	return () => cancelAnimationFrame(frame);

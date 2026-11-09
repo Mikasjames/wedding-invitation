@@ -11,8 +11,6 @@
 		hint?: string;
 		withMusic?: boolean;
 		celebration?: CelebrationKind;
-		/** @deprecated Use `celebration` instead. */
-		withConfetti?: boolean;
 	}
 
 	let {
@@ -21,17 +19,16 @@
 		monogram,
 		hint,
 		withMusic,
-		celebration = DEFAULT_CELEBRATION,
-		withConfetti
+		celebration = DEFAULT_CELEBRATION
 	}: Props = $props();
 </script>
 
 {#if kind === 'curtain'}
-	<CurtainReveal {monogram} {hint} {withMusic} {celebration} {withConfetti}>
+	<CurtainReveal {monogram} {hint} {withMusic} {celebration}>
 		{@render children?.()}
 	</CurtainReveal>
 {:else}
-	<EnvelopeReveal {monogram} {hint} {withMusic} {celebration} {withConfetti}>
+	<EnvelopeReveal {monogram} {hint} {withMusic} {celebration}>
 		{@render children?.()}
 	</EnvelopeReveal>
 {/if}
