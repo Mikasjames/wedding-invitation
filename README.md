@@ -29,6 +29,8 @@ reveal components. `src/lib/lib/celebration.ts` owns it:
   `'confetti'` or `'none'` to swap the whole site.
 - `?celebrate=seal|confetti|none` overrides it for a single page load, so the
   alternatives can be compared on a real phone without a rebuild.
+- `?celebrateSpeed=1.25` slows or speeds the CSS burst for pacing experiments.
+  The default is `1.15`; values are clamped to `0.75–1.5`.
 - `prefers-reduced-motion` disables the effect entirely, and `isLowEnd()`
   trims the CSS burst to its bloom and a few shards.
 

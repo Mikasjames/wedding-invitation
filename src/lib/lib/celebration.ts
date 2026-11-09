@@ -42,6 +42,17 @@ export const DEFAULT_CELEBRATION: CelebrationKind = 'seal';
 
 export const CELEBRATION_KINDS = ['seal', 'confetti', 'none'] as const;
 
+/**
+ * How much slower the CSS burst plays than its authored timings. The effect is
+ * compositor-only, so slowing it does not reduce per-frame cost; it only makes
+ * each frame travel less, which reads as smoother on a weak display. Kept
+ * small enough that the burst still clears the envelope's letter phase.
+ */
+export const DEFAULT_CELEBRATION_SPEED = 1.15;
+
+const MIN_CELEBRATION_SPEED = 0.75;
+const MAX_CELEBRATION_SPEED = 1.5;
+
 export function resolveCelebration(
 	kind: CelebrationKind,
 	{ reducedMotion, lowEnd, confettiScale }: CelebrationInput
@@ -76,4 +87,21 @@ export function celebrationFromSearch(
 	return value && (CELEBRATION_KINDS as readonly string[]).includes(value)
 		? (value as CelebrationKind)
 		: fallback;
+}
+
+/**
+ * Read the `?celebrateSpeed=1.25` override for A/B testing the pacing. Values
+ * outside the safe range are clamped; non-numeric values fall back.
+ */
+export function celebrationSpeedFromSearch(
+	search: string,
+	fallback: number = DEFAULT_CELEBRATION_SPEED
+): number {
+	const raw = new URLSearchParams(search).get('celebrateSpeed');
+	if (raw === null || raw.trim() === '') return fallback;
+
+	const value = Number(raw);
+	if (!Number.isFinite(value)) return fallback;
+
+	return Math.min(MAX_CELEBRATION_SPEED, Math.max(MIN_CELEBRATION_SPEED, value));
 }
