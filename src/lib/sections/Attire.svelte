@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { scrollReveal } from '$lib/actions/scroll-reveal';
 	import Ornament from '$lib/components/Ornament.svelte';
 	import { wedding } from '$lib/lib/wedding';
 </script>
 
-<section class="bg-powder/30 px-6 py-24">
+<section class="bg-powder/30 px-6 py-24" use:scrollReveal>
 	<div class="mx-auto flex max-w-md flex-col items-center text-center">
 		<p class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
 			Dress Code
@@ -19,8 +20,12 @@
 			aria-label="Dress code colors"
 			data-palette
 		>
-			{#each wedding.dressCode.palette as colour}
-				<li class="flex w-[4.5rem] flex-col items-center gap-2" data-palette-swatch>
+			{#each wedding.dressCode.palette as colour, i}
+				<li
+					class="flex w-[4.5rem] flex-col items-center gap-2"
+					data-palette-swatch
+					use:scrollReveal={{ delay: i * 80, variant: 'scale' }}
+				>
 					<span
 						class="h-14 w-14 rounded-full ring-1 ring-ink/20"
 						style:background-color={colour.hex}

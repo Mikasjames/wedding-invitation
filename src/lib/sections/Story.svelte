@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { scrollReveal } from '$lib/actions/scroll-reveal';
 	import Ornament from '$lib/components/Ornament.svelte';
 	import { wedding } from '$lib/lib/wedding';
 </script>
 
-<section class="bg-champagne/20 px-6 py-24">
+<section class="bg-champagne/20 px-6 py-24" use:scrollReveal>
 	<div class="mx-auto flex max-w-md flex-col items-center text-center">
 		<p class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
 			Our Story
