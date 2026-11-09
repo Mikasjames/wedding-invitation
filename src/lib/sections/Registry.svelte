@@ -1,20 +1,24 @@
 <script lang="ts">
+	import { scrollReveal } from '$lib/actions/scroll-reveal';
 	import Ornament from '$lib/components/Ornament.svelte';
 	import { wedding } from '$lib/lib/wedding';
 </script>
 
 <section class="bg-powder/30 px-6 py-24">
 	<div class="mx-auto flex max-w-md flex-col items-center text-center">
-		<p class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
-			Registry
-		</p>
-		<Ornament class="my-6" />
-		<p class="font-display text-lg text-ink/70">
-			Your presence is the only gift we ask for. For those who insist:
-		</p>
+		<div use:scrollReveal>
+			<p class="font-body text-[10px] font-medium tracking-[0.34em] text-gold-deep uppercase">
+				Registry
+			</p>
+			<Ornament class="my-6" />
+			<p class="font-display text-lg text-ink/70">
+				Your presence is the only gift we ask for. For those who insist:
+			</p>
+		</div>
 		<div class="mt-8 flex flex-col gap-3">
-			{#each wedding.registry as item}
+			{#each wedding.registry as item, i}
 				<a
+					use:scrollReveal={{ delay: i * 70, variant: 'up' }}
 					href={item.url}
 					target="_blank"
 					rel="noopener noreferrer"
